@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Новый вопрос{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">Новый вопрос</h1>
+  <div class="glass p-3">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Текст вопроса</label>
+        <textarea name="text" class="form-control" rows="4" required></textarea>
+      </div>
+      <button class="btn btn-gradient">Сохранить</button>
+      <a class="btn btn-outline-secondary ms-2" href="{{ url_for('admin.quiz_edit', block_id=block.id) }}">Назад</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

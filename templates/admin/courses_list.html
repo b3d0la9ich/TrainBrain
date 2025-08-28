@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Админ · Курсы{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Курсы</h1>
+    <a href="{{ url_for('admin.course_new') }}" class="btn btn-gradient">
+      <i class="bi bi-plus-lg me-1"></i>Новый курс
+    </a>
+  </div>
+
+  <div class="row g-3">
+    {% for c in courses %}
+      <div class="col-md-6">
+        <div class="card glass">
+          <div class="card-body">
+            <h5 class="card-title mb-1">{{ c.title }}</h5>
+            <div class="text-secondary small mb-2">
+              {{ c.created_at.strftime('%d.%m.%Y %H:%M') }} ·
+              {% if c.is_published %}<span class="badge bg-success">Опубликован</span>{% else %}<span class="badge bg-secondary">Черновик</span>{% endif %}
+            </div>
+            <p class="mb-3">{{ c.description|truncate(160, True, '…') }}</p>
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.course_edit', course_id=c.id) }}">Редактировать</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('course.course_view', course_id=c.id) }}" target="_blank">Открыть</a>
+            <form class="d-inline" method="post" action="{{ url_for('admin.course_delete', course_id=c.id) }}" onsubmit="return confirm('Удалить курс?')">
+              <button class="btn btn-sm btn-outline-danger">Удалить</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info">Курсов нет. Создайте первый.</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

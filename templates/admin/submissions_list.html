@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Отправки{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Отправки</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.courses_list') }}">← К курсам</a>
+  </div>
+
+  {% if block %}
+    <div class="alert alert-light border">
+      Блок: <strong>{{ block.payload.get('title','(без названия)') }}</strong>
+      <span class="text-muted"> · тип: {{ block.type }} · модуль #{{ block.order }} · курс: {{ block.module.course.title }}</span>
+    </div>
+  {% endif %}
+
+  {% if submissions %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Пользователь</th>
+            <th>Курс / Модуль / Блок</th>
+            <th>Файл</th>
+            <th>Размер</th>
+            <th>Статус / Комментарий</th>
+            <th>Дата</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in submissions %}
+          <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ s.user.email }}</td>
+            <td>
+              {{ s.block.module.course.title }} /
+              #{{ s.block.module.order }} {{ s.block.module.title }} /
+              #{{ s.block.order }} {{ s.block.payload.get('title','') }}
+            </td>
+            <td>
+              <a href="{{ url_for('static', filename=s.stored_path) }}" target="_blank">
+                {{ s.original_name }}
+              </a>
+            </td>
+            <td>{{ (s.size_bytes or 0) // 1024 }} КБ</td>
+            <td>
+              <form method="post" action="{{ url_for('admin.submission_update', submission_id=s.id) }}" class="d-flex gap-2">
+                <select name="status" class="form-select form-select-sm" style="max-width: 160px;">
+                  {% for st in ['submitted','checked','accepted','rejected','needs-fix'] %}
+                    <option value="{{ st }}" {% if s.status == st %}selected{% endif %}>{{ st }}</option>
+                  {% endfor %}
+                </select>
+                <input type="text" name="comment" value="{{ s.comment or '' }}" class="form-control form-control-sm" placeholder="Комментарий" style="max-width: 260px;">
+                <button class="btn btn-sm btn-primary">OK</button>
+              </form>
+            </td>
+            <td>{{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-muted">Отправок пока нет.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="mb-0">{{ course.title }}</h1>
+    <a href="{{ url_for('course.list_courses') }}" class="btn btn-outline-secondary">← Ко всем курсам</a>
+  </div>
+
+  {% if course.description %}
+    <p class="text-muted">{{ course.description }}</p>
+  {% endif %}
+
+  {% for m in course.modules %}
+    <h3 class="mt-4">Модуль #{{ m.order }}: {{ m.title }}</h3>
+
+    {% if m.blocks %}
+      {# Сначала все, кроме тестов #}
+      {% set others = m.blocks | rejectattr('type','equalto','quiz') | list %}
+      {% for b in others %}
+        {% if b.type == 'text' %}
+          {% include 'blocks/text.html' %}
+
+        {% elif b.type == 'video' %}
+          <div id="block-{{ b.id }}" class="card mb-3 glass">
+            <div class="card-body">
+              <h5 class="card-title">{{ b.payload.title }}</h5>
+              {% if b.payload.url %}
+                <div class="ratio ratio-16x9">
+                  <iframe src="{{ b.payload.url }}" frameborder="0" allowfullscreen></iframe>
+                </div>
+              {% elif b.payload.src %}
+                <video class="w-100" controls>
+                  <source src="{{ b.payload.src }}" type="video/mp4">
+                </video>
+              {% endif %}
+              {% if b.payload.caption %}
+                <p class="text-muted mt-2">{{ b.payload.caption }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+        {% elif b.type == 'assignment' %}
+          {% include 'blocks/assignment.html' %}
+
+        {% else %}
+          <div class="alert alert-warning">Неизвестный тип блока: {{ b.type }}</div>
+        {% endif %}
+      {% endfor %}
+
+      {# А тесты — В КОНЦЕ #}
+      {% set quizzes = m.blocks | selectattr('type','equalto','quiz') | list %}
+      {% for b in quizzes %}
+        {% include 'blocks/quiz.html' %}
+      {% endfor %}
+    {% else %}
+      <div class="text-muted">В модуле нет блоков.</div>
+    {% endif %}
+  {% else %}
+    <div class="text-muted">Модулей пока нет.</div>
+  {% endfor %}
+</div>
+
+{# необязательно, но помогает прокрутке при фикс-хедере #}
+<script>
+(function () {
+  const OFFSET = 80; // если есть фикс-меню — поправь высоту
+  function go() {
+    if (!location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.pageYOffset - OFFSET;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+  window.addEventListener('load', go);
+  window.addEventListener('hashchange', go);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Курсы{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1>Курсы</h1>
+  <div class="row g-3">
+    {% for c in courses %}
+      <div class="col-md-4">
+        <div class="card h-100 glass">
+          <div class="card-body">
+            <h5 class="card-title">{{ c.title }}</h5>
+            <p class="card-text">{{ c.description|truncate(140, True, '…') }}</p>
+            <a href="{{ url_for('course.course_view', course_id=c.id) }}" class="btn btn-gradient">Открыть</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <p class="text-muted">Курсов пока нет</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+    

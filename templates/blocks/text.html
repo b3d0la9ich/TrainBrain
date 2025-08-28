@@ -1,0 +1,10 @@
+<div id="block-{{ b.id }}" class="card mb-3 glass">
+  <div class="card-body">
+    <h5 class="card-title">{{ b.payload.title }}</h5>
+    {% if b.payload.text %}
+      <div class="card-text">{{ b.payload.text | md | safe }}</div>
+    {% elif b.payload.html %}
+      <div class="card-text">{{ b.payload.html | safe }}</div>
+    {% endif %}
+  </div>
+</div>

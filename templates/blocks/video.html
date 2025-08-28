@@ -1,0 +1,17 @@
+<div class="card mb-3 glass">
+  <div class="card-body">
+    <h5 class="card-title">{{ b.payload.title or "Видео" }}</h5>
+    {% if b.payload.url %}
+      <div class="ratio ratio-16x9">
+        <iframe src="{{ b.payload.url }}" allowfullscreen></iframe>
+      </div>
+    {% elif b.payload.src %}
+      <video class="w-100" controls>
+        <source src="{{ b.payload.src }}">
+      </video>
+    {% endif %}
+    {% if b.payload.caption %}
+      <p class="text-secondary small">{{ b.payload.caption }}</p>
+    {% endif %}
+  </div>
+</div>

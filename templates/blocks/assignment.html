@@ -1,0 +1,86 @@
+<div id="block-{{ b.id }}" class="card mb-3 glass">
+  <div class="card-body">
+    <h5 class="card-title">{{ b.payload.title or "Задание" }}</h5>
+    {% if b.payload.instructions %}
+      <p class="card-text">{{ b.payload.instructions }}</p>
+    {% endif %}
+
+    {# --- есть ли в модуле обязательные тесты? --- #}
+    {% set required_quizzes = [] %}
+    {% for qb in b.module.blocks %}
+      {% if qb.type == 'quiz' and qb.payload.get('require_pass', True) %}
+        {% set _ = required_quizzes.append(qb) %}
+      {% endif %}
+    {% endfor %}
+
+    {# --- проверяем: текущий пользователь прошёл какой-нибудь из обязательных тестов? --- #}
+    {% set ns = namespace(passed_any=false) %}
+    {% for qb in required_quizzes %}
+      {% for att in qb.quiz_attempts %}
+        {% if att.user_id == current_user.id and att.passed %}
+          {% set ns.passed_any = true %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+
+    {% if required_quizzes and not ns.passed_any %}
+      <div class="alert alert-warning d-flex justify-content-between align-items-center">
+        <div>
+          Чтобы приступить к заданию, сначала пройдите тест по модулю
+          (проходной балл: {{ required_quizzes[0].payload.get('pass_score', 70) }}%).
+        </div>
+        <a class="btn btn-sm btn-primary"
+           href="{{ url_for('course.course_view', course_id=b.module.course_id) }}#block-{{ required_quizzes[0].id }}">
+          Перейти к тесту
+        </a>
+      </div>
+      <div class="text-muted small">Форма отправки будет доступна после успешного прохождения теста.</div>
+    {% else %}
+      {% if current_user.is_authenticated %}
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('course.submit_assignment', block_id=b.id) }}"
+            class="row g-2">
+        <div class="col-md-8">
+          <input class="form-control" type="file" name="solution" required>
+        </div>
+        <div class="col-md-4">
+          <button class="btn btn-gradient w-100">Отправить решение</button>
+        </div>
+      </form>
+
+      <div class="mt-3">
+        <div class="fw-semibold mb-1">Мои отправки:</div>
+        {% set mine = [] %}
+        {% for s in b.submissions %}
+          {% if s.user_id == current_user.id %}
+            {% set _ = mine.append(s) %}
+          {% endif %}
+        {% endfor %}
+        {% if mine %}
+          <ul class="list-group">
+            {% for s in mine|sort(attribute='created_at', reverse=True) %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                  <i class="bi bi-file-earmark-text me-1"></i>
+                  <a href="{{ url_for('static', filename=s.stored_path) }}" target="_blank">{{ s.original_name }}</a>
+                  <span class="text-muted small ms-2">
+                    ({{ (s.size_bytes or 0) // 1024 }} КБ · {{ s.created_at.strftime('%d.%m.%Y %H:%M') }})
+                  </span>
+                  {% if s.comment %}
+                    <span class="text-muted small ms-2">💬 {{ s.comment }}</span>
+                  {% endif %}
+                </span>
+                <span class="badge bg-secondary">{{ s.status }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-muted small">Отправок пока нет.</div>
+        {% endif %}
+      </div>
+      {% else %}
+        <div class="alert alert-info mt-2">Чтобы отправить решение, войдите в аккаунт.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>

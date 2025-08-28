@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1>{{ course.title }}</h1>
+  <p class="text-muted">{{ course.description }}</p>
+
+  {% for m in course.modules %}
+    <h3 class="mt-4">Модуль {{ m.order }}: {{ m.title }}</h3>
+
+    {% for b in m.blocks %}
+      <div class="glass p-3 mb-3">
+        {% if b.type == "text" %}
+          <h5>{{ b.payload.title }}</h5>
+          <div>{{ b.payload.html | safe }}</div>
+        {% elif b.type == "video" %}
+          <h5>{{ b.payload.title }}</h5>
+          {% if b.payload.url %}
+            <div class="ratio ratio-16x9">
+              <iframe src="{{ b.payload.url }}" frameborder="0" allowfullscreen></iframe>
+            </div>
+          {% elif b.payload.src %}
+            <video controls class="w-100">
+              <source src="{{ b.payload.src }}" type="video/mp4">
+            </video>
+          {% endif %}
+          {% if b.payload.caption %}<p class="text-muted">{{ b.payload.caption }}</p>{% endif %}
+        {% elif b.type == "assignment" %}
+          <h5>{{ b.payload.title }}</h5>
+          <p>{{ b.payload.instructions }}</p>
+          <form method="post" action="{{ url_for('course.submit_assignment', block_id=b.id) }}" enctype="multipart/form-data">
+            <input type="file" name="file" class="form-control mb-2" required>
+            <button class="btn btn-primary">Отправить</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}

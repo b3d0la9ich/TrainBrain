@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">{{ title }}</h1>
+  <div class="glass p-3">
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">
+        {{ form.title.label(class="form-label") }}
+        {{ form.title(class="form-control") }}
+      </div>
+      {{ form.submit(class="btn btn-gradient") }}
+      <a class="btn btn-outline-secondary ms-2" href="{{ url_for('admin.course_edit', course_id=course.id) }}">Назад к курсу</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
