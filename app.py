@@ -36,6 +36,10 @@ def create_app():
 
     # --- Инициализация ---
     db.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+
     Migrate(app, db)
 
     login_manager = LoginManager(app)
