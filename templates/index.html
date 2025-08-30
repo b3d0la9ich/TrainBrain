@@ -1,16 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Главная · TrainBrain{% endblock %}
 {% block content %}
-<div class="container text-center py-5">
-  <h1 class="fw-bold mb-3">TrainBrain</h1>
-  <p class="lead mb-4 text-secondary">
-    Обучающая и тестирующая система с гибкой структурой.
-  </p>
-  {% if current_user.is_authenticated %}
-    <a href="{{ url_for('dashboard') }}" class="btn btn-gradient btn-lg"><i class="bi bi-speedometer2 me-2"></i>Перейти в панель</a>
-  {% else %}
-    <a href="{{ url_for('register') }}" class="btn btn-gradient btn-lg me-2">Регистрация</a>
-    <a href="{{ url_for('login') }}" class="btn btn-outline-dark btn-lg">Войти</a>
-  {% endif %}
-</div>
+<section class="container py-5">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-7">
+      <h1 class="fw-bold display-5 mb-3">Обучение, тесты и задания — в одном месте</h1>
+      <p class="lead text-secondary mb-4">
+        Создавайте курсы, проходите модули, сдавайте задания и получайте обратную связь. Быстро. Удобно. Красиво.
+      </p>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-grad btn-lg"><i class="bi bi-speedometer2 me-1"></i>В панель</a>
+      {% else %}
+        <a href="{{ url_for('register') }}" class="btn btn-grad btn-lg me-2">Начать бесплатно</a>
+        <a href="{{ url_for('login') }}" class="btn btn-ghost btn-lg">Войти</a>
+      {% endif %}
+    </div>
+    <div class="col-lg-5">
+      <div class="glass p-4 shadow-hover">
+        <div class="d-flex align-items-center mb-3">
+          <span class="badge-soft me-2">Наглядно</span>
+          <span class="badge-soft me-2">Гибко</span>
+          <span class="badge-soft">Быстро</span>
+        </div>
+        <p class="text-secondary mb-0">
+          Платформа поддерживает текстовые блоки, видео, тесты с проходным баллом и задания с отправкой файлов.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

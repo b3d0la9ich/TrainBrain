@@ -1,312 +1,253 @@
-/* =========================
-   TrainBrain — Global Theme
-   ========================= */
-
-:root{
-  --bg:            #0b0f14;
-  --panel:         rgba(19, 25, 33, .75);
-  --panel-opaque:  #141b23;
-  --text:          #e7eef6;
-  --muted:         #9fb0c3;
-  --primary:       #4da3ff;
-  --primary-700:   #2c7be5;
-  --success:       #3ecf8e;
-  --warning:       #ffcc66;
-  --danger:        #ff6b6b;
-  --card-border:   rgba(255,255,255,.09);
-  --ring:          rgba(77,163,255,.35);
-
+/* ---------- Theme ---------- */
+:root {
+  --bg: #120d17;
+  --bg-soft: rgba(255,255,255,.04);
+  --panel: rgba(255,255,255,.06);
+  --panel-strong: rgba(255,255,255,.12);
+  --text: #e6edf3;
+  --secondary: #9aa4b2;
+  --primary: #3b4ef6;
+  --primary-2: #3c25eb;
+  --accent: #8822ee; /* для градиента */
+  --danger: #ef4444;
+  --success: #10b981;
   --radius: 16px;
-  --radius-sm: 12px;
-
-  --shadow-1: 0 10px 30px rgba(0,0,0,.35);
-  --shadow-2: 0 2px 0 rgba(255,255,255,.02) inset, 0 1px 0 rgba(255,255,255,.04) inset;
+  --shadow: 0 10px 30px rgba(0,0,0,.45);
+  --blur: saturate(180%) blur(10px);
 }
 
-/* --- Base -------------------------------------------------------------- */
-html,body{height:100%;}
-body{
-  background: radial-gradient(1200px 800px at 10% -10%, rgba(77,163,255,.08), transparent 60%),
-              radial-gradient(900px 600px at 110% 20%, rgba(62,207,142,.08), transparent 60%),
-              var(--bg);
-  color:var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-  letter-spacing:.1px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-a{ color: var(--primary); text-decoration: none; }
-a:hover{ color: #7bbdff; text-decoration: underline; }
-
-.container{ max-width: 1120px; }
-
-/* --- Navbar ------------------------------------------------------------ */
-.navbar{
-  backdrop-filter: blur(10px);
-  background: rgba(10,14,19,.6) !important;
-  border-bottom: 1px solid var(--card-border);
-}
-.navbar .navbar-brand{ font-weight: 800; letter-spacing:.4px; }
-.navbar .nav-link{ color: var(--muted) !important; }
-.navbar .nav-link:hover{ color: var(--text) !important; }
-
-/* --- Cards / Glass ----------------------------------------------------- */
-.glass, .card{
-  background: var(--panel);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-1), var(--shadow-2);
-}
-.card .card-title{ font-weight: 700; }
-.border{ border-color: var(--card-border) !important; }
-.bg-light{ background: rgba(255,255,255,.03) !important; }
-
-/* --- Headings ---------------------------------------------------------- */
-h1,h2,h3,h4,h5{ color: var(--text); }
-h1{ font-weight: 800; }
-h2,h3{ font-weight: 700; }
-
-/* --- Buttons ----------------------------------------------------------- */
-.btn{ border-radius: 12px; border: 1px solid transparent; }
-.btn-gradient{
-  background: linear-gradient(135deg, var(--primary-700), var(--primary));
-  color: #fff;
-  border: 0;
-  transition: transform .05s ease, box-shadow .2s ease;
-  box-shadow: 0 10px 20px rgba(77,163,255,.25);
-}
-.btn-gradient:hover{ transform: translateY(-1px); color:#fff; box-shadow: 0 14px 26px rgba(77,163,255,.32); }
-.btn-outline-secondary{ color: var(--muted); border-color: var(--card-border); }
-.btn-outline-secondary:hover{ color: var(--text); background: rgba(255,255,255,.06); border-color: var(--card-border); }
-.btn-outline-primary{ border-color: var(--primary); color: var(--primary); }
-.btn-outline-primary:hover{ background: rgba(77,163,255,.12); color:#bfe0ff; border-color: var(--primary); }
-.btn-primary{ background: var(--primary-700); border: none; }
-.btn-primary:hover{ background: var(--primary); }
-
-/* Small pills */
-.btn-sm{ border-radius: 10px; padding:.35rem .6rem; }
-
-/* --- Forms ------------------------------------------------------------- */
-.form-control, .form-select{
-  background: var(--panel-opaque);
-  color: var(--text);
-  border-radius: 12px;
-  border: 1px solid var(--card-border);
-}
-.form-control::placeholder{ color: #7f8ea1; }
-.form-control:focus, .form-select:focus{
-  border-color: transparent;
-  outline: none;
-  box-shadow: 0 0 0 4px var(--ring);
-  background: #1a232e;
-  color: var(--text);
-}
-label.form-label{ color: var(--muted); }
-.input-group-text{ background: var(--panel-opaque); border-color: var(--card-border); color: var(--muted); }
-
-/* Radios (для тестов) */
-.form-check-input{
-  background-color: #1a232e;
-  border-color: var(--card-border);
-}
-.form-check-input:checked{
-  background-color: var(--primary);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--ring);
+html[data-theme="light"] {
+  --bg: #f7f8fb;
+  --bg-soft: rgba(0,0,0,.04);
+  --panel: rgba(112, 86, 133, 0.8);
+  --panel-strong: rgba(255,255,255,1);
+  --text: #211f26;
+  --secondary: #24262b;
+  --primary: #4325eb;
+  --primary-2: #1d4ed8;
+  --shadow: 0 10px 30px rgba(0,0,0,.1);
 }
 
-/* --- Tables ------------------------------------------------------------ */
-.table{
-  color: var(--text);
-  --bs-table-bg: transparent;
-  --bs-table-striped-bg: rgba(255,255,255,.03);
-  border-color: var(--card-border);
-}
-.table thead th{ color: var(--muted); font-weight: 600; }
-
-/* --- Alerts / Badges --------------------------------------------------- */
-.alert{
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-}
-.alert-info{ background: rgba(77,163,255,.12); color: #cfe6ff; }
-.alert-success{ background: rgba(62,207,142,.14); color: #cffff0; }
-.alert-warning{ background: rgba(255,204,102,.12); color: #ffe7b3; }
-.alert-danger{ background: rgba(255,107,107,.14); color: #ffd0d0; }
-
-.badge{ border-radius: 999px; padding:.4rem .6rem; }
-.bg-secondary{ background: rgba(255,255,255,.12) !important; color: var(--muted) !important; }
-.bg-info{ background: rgba(77,163,255,.18) !important; color: #d8ecff !important; }
-
-/* --- Flash stack ------------------------------------------------------- */
-.flash-stack{ position: sticky; top: 12px; z-index: 1030; }
-
-/* --- Markdown / Code --------------------------------------------------- */
-.card-text p{ margin-bottom: .75rem; }
-.card-text ul, .card-text ol{ margin-bottom: .75rem; }
-.card-text code{
-  background:#10161d; border:1px solid var(--card-border); border-radius: 6px; padding:.1rem .35rem;
-}
-.card-text pre{
-  background:#10161d; border:1px solid var(--card-border); border-radius: 10px; color:#e7eef6; padding:1rem;
-  overflow:auto;
-}
-
-/* --- Quiz blocks ------------------------------------------------------- */
-.quiz-question{ background: rgba(255,255,255,.03); border:1px solid var(--card-border); border-radius: 12px; }
-.quiz-question + .quiz-question{ margin-top: 1rem; }
-
-/* --- Upload list ------------------------------------------------------- */
-.list-group-item{
-  background: rgba(255,255,255,.02);
-  border-color: var(--card-border);
-  color: var(--text);
-}
-
-/* --- Helpers ----------------------------------------------------------- */
-.text-muted, .text-secondary{ color: var(--muted) !important; }
-hr{ border-color: var(--card-border); opacity:.35; }
-
-/* --- Animations -------------------------------------------------------- */
-.fade-up{ animation: fadeUp .35s ease both; }
-@keyframes fadeUp{
-  from{ opacity:0; transform: translateY(8px); }
-  to{ opacity:1; transform: none; }
-}
-
-/* --- Responsive tweaks ------------------------------------------------- */
-@media (max-width: 576px){
-  .btn{ border-radius: 10px; }
-  .container{ padding-left: 1rem; padding-right: 1rem; }
-}
-
-/* ====== контрастные токены ====== */
-:root{
-  --bg: #0b1016;
-  --bg-2: #0f1723;
-  --glass: rgba(255,255,255,.08);      /* было .06 */
-  --glass-border: rgba(255,255,255,.18);
-  --fg: #cbd5e1;                        /* обычный текст */
-  --fg-strong: #e9eef8;                 /* яркие заголовки */
-  --fg-muted: #9aa8be;
-  --brand: #3b82f6;
-  --brand-2: #60a5fa;
-}
-
-/* фон чуть светлее */
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
 body {
-  color: var(--fg);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,.18), transparent 60%),
-    radial-gradient(900px 500px at 100% 10%, rgba(14,165,233,.14), transparent 60%),
-    linear-gradient(180deg, var(--bg), var(--bg-2));
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  color: var(--text);
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(96, 59, 246, 0.25), transparent 60%),
+              radial-gradient(1000px 500px at 110% 20%, rgba(95, 34, 238, 0.18), transparent 60%),
+              var(--bg);
+  min-height: 100vh;
 }
 
-/* стеклянные карточки с лучшей читаемостью */
-.glass,
-.card.glass {
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.06));
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-  border-radius: 16px;
+a, .btn-link { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-2); }
+
+/* ---------- Topbar ---------- */
+.tb {
+  position: sticky; top: 0; z-index: 1000;
+  backdrop-filter: var(--blur);
+  background: linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.0));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.brand {
+  font-weight: 800; letter-spacing: .3px;
+  color: var(--text); text-decoration: none;
+  display: inline-flex; align-items: center;
+}
+.tb-nav .tb-link {
+  color: var(--secondary);
+  padding: .75rem .9rem; border-radius: 10px;
+}
+.tb-nav .tb-link:hover { background: var(--bg-soft); color: var(--text); }
+
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+  display: grid; place-items: center; color: var(--secondary); background: transparent;
+}
+.icon-btn:hover { color: var(--text); background: var(--bg-soft); }
+
+.user-chip {
+  padding: .45rem .7rem; border-radius: 999px; font-size: .9rem;
+  background: var(--bg-soft); color: var(--text); border: 1px solid rgba(255,255,255,.08);
 }
 
-/* КОНТРАСТНЫЕ ЗАГОЛОВКИ */
-h1, h2, h3, h4, .card-title {
-  color: var(--fg-strong) !important;
-  letter-spacing: .2px;
+/* ---------- Buttons ---------- */
+.btn-grad {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: white; border: 0; border-radius: 12px; padding: .6rem 1.05rem; font-weight: 700;
+  box-shadow: 0 10px 20px rgba(37,99,235,.25);
 }
-h1 { font-weight: 800; }
-h2, .card-title { font-weight: 700; }
+.btn-grad:hover { filter: brightness(.98); color: #fff; }
 
-/* более читабельные подписи */
-.text-muted,
-.text-secondary,
-.form-text {
-  color: var(--fg-muted) !important;
+.btn-ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: .55rem .95rem;
 }
+.btn-ghost:hover { background: var(--bg-soft); color: var(--text); }
 
-/* таблицы и бордеры на тёмном фоне */
-.table {
-  color: var(--fg);
-}
-.table thead th { color: var(--fg-strong); }
-.table-striped tbody tr:nth-of-type(odd){
-  background-color: rgba(255,255,255,.03);
-}
-.border,
-.border.rounded,
-.alert.border {
-  border-color: var(--glass-border) !important;
+/* ---------- Cards & surfaces ---------- */
+.glass, .card.glass, .alert-glass {
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: var(--blur);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-/* алерты — ярче заголовки и фон */
-.alert {
-  color: var(--fg);
-  border-radius: 14px;
-}
-.alert-success { background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.35); }
-.alert-warning { background: rgba(245,158,11,.15); border-color: rgba(245,158,11,.35); }
-.alert-danger  { background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.38); }
+.card-title { font-weight: 700; }
 
-/* кнопки */
-.btn-gradient{
-  background-image: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
-  border: none;
-  box-shadow: 0 6px 20px rgba(59,130,246,.35);
-}
-.btn-gradient:hover{
-  filter: brightness(1.05);
-  box-shadow: 0 8px 26px rgba(59,130,246,.45);
-}
-.btn-outline-secondary,
-.btn-outline-primary{
-  color: var(--fg-strong);
-  border-color: rgba(255,255,255,.28);
-}
-.btn-outline-secondary:hover,
-.btn-outline-primary:hover{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(255,255,255,.45);
+/* разделители и заголовки на тёмном фоне читаемые */
+h1, h2, h3, h4, h5 { color: var(--text); }
+.text-secondary, .muted { color: var(--secondary) !important; }
+
+/* ---------- Grids ---------- */
+.page { padding-bottom: 70px; }
+.foot {
+  border-top: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: var(--blur);
+  background: linear-gradient(to top, rgba(0,0,0,.25), rgba(0,0,0,0));
+  padding: 18px 0; color: var(--secondary);
 }
 
-/* навбар — читабельные ссылки */
-.navbar.navbar-dark .navbar-nav .nav-link{
-  color: var(--fg);
-}
-.navbar.navbar-dark .navbar-nav .nav-link:hover,
-.navbar .navbar-brand{
-  color: var(--fg-strong);
-}
-
-/* инпуты — границы виднее */
-.form-control, .form-select {
-  color: var(--fg);
+/* ---------- Forms ---------- */
+.form-control, .form-select, .form-check-input {
   background-color: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.2);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
 }
 .form-control:focus, .form-select:focus {
-  border-color: rgba(99, 179, 237, .65);
-  box-shadow: 0 0 0 0.2rem rgba(59,130,246,.25);
+  border-color: rgba(59,130,246,.6);
+  box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
+  background-color: rgba(255,255,255,.06);
+}
+label.form-label { color: var(--secondary); }
+
+/* ---------- Tables ---------- */
+.table {
+  color: var(--text);
+  --bs-table-striped-color: var(--text);
+  --bs-table-striped-bg: rgba(255,255,255,.03);
+  --bs-table-hover-bg: rgba(255,255,255,.05);
+  --bs-table-border-color: rgba(255,255,255,.08);
 }
 
-/* бейджи на тёмном фоне */
-.badge.bg-light {
-  background: rgba(255,255,255,.16) !important;
-  color: var(--fg-strong);
+/* ---------- Alerts ---------- */
+.alert { border-radius: 14px; border:1px solid transparent; }
+.alert-glass { background: rgba(34,197,94,.08); }
+.alert-warning.alert-glass { background: rgba(245,158,11,.08); }
+.alert-danger.alert-glass  { background: rgba(239,68,68,.10); }
+.alert-info.alert-glass    { background: rgba(59,130,246,.10); }
+
+/* ---------- Utility ---------- */
+.badge-soft {
+  background: rgba(59,130,246,.15); color: #93c5fd;
+  border: 1px solid rgba(59,130,246,.25); border-radius: 999px; padding: .35rem .65rem;
 }
-.badge.bg-info {
-  background: rgba(14,165,233,.22) !important;
-  color: #c9f0ff;
+.shadow-hover { transition:.2s transform ease, .2s box-shadow ease; }
+.shadow-hover:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+
+
+/* --- Inputs: dark theme legibility --- */
+:root[data-theme="dark"] .form-control {
+  color: #e9f0ff;             /* видимый текст */
+  background: #121821;        /* тёмный фон поля */
+  border-color: #2a3a4c;      /* аккуратная рамка */
+  box-shadow: none;
 }
 
-/* карточки на дашборде — заголовки не «тонут» */
-.card.glass .card-title,
-.glass .fw-extrabold,
-.glass h5 {
-  color: var(--fg-strong);
+:root[data-theme="dark"] .form-control:focus {
+  color: #ffffff;
+  background: #10151d;
+  border-color: #833bf6;      /* акцент при фокусе */
+  outline: 0;
+  box-shadow: 0 0 0 .2rem rgba(59,130,246,.25);
+}
+
+/* Плейсхолдеры читаемые */
+:root[data-theme="dark"] .form-control::placeholder {
+  color: #737099;             /* мягкий серо-голубой */
+  opacity: 1;                 /* Safari/Firefox */
+}
+
+/* Текст в autofill (Chrome) */
+:root[data-theme="dark"] input:-webkit-autofill,
+:root[data-theme="dark"] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e9f0ff;
+  transition: background-color 9999s ease-out 0s; /* скрыть жёлтый фон */
+}
+
+/* Для disabled/readonly, чтобы не исчезал текст */
+:root[data-theme="dark"] .form-control:disabled,
+:root[data-theme="dark"] .form-control[readonly] {
+  color: #9ba5b5;
+  background: #0f141b;
+}
+
+
+/* Заголовки карточек */
+.card-title, 
+h5, 
+h4 {
+  color: #f5f7fa !important;     /* светлый читаемый текст */
+  font-weight: 600;
+}
+
+/* Текст внутри карточек */
+.card-text {
+  color: #c9d6e3;                /* мягкий серо-голубой */
+}
+
+/* Подписи/иконки внутри карточек */
+.card .text-secondary,
+.card .text-muted {
+  color: #a0b3cc !important;     /* делаем чуть ярче */
+}
+
+
+.card h5.card-title {
+  color: #ffffff !important;
+  font-size: 1.2rem;
+}
+
+/* Исправляем видимость muted-текста на тёмной теме */
+.text-muted {
+  color: #aebacd !important;   /* светло-серый вместо почти чёрного */
+}
+
+
+.text-muted {
+  color: #8faadc !important;   /* мягкий голубой */
+  font-style: italic;          /* можно сделать курсивом для акцента */
+}
+
+.btn-gradient {
+  background: linear-gradient(90deg, #007cf0, #00dfd8);
+  color: #fff !important;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0 10px rgba(148, 0, 240, 0.5);
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(19, 0, 223, 0.7);
+}
+
+/* Название курса */
+.card .card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff !important;   /* яркий белый */
+  text-shadow: 0 0 8px rgba(0, 153, 255, 0.6);
+}
+
+/* Описание курса */
+.card .card-text {
+  color: #ddd !important;      /* светло-серый, хорошо виден */
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 

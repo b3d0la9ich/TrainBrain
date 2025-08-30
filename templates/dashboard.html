@@ -2,26 +2,28 @@
 {% block title %}Панель{% endblock %}
 {% block content %}
 <div class="container py-4">
-  <h1 class="mb-3">Панель управления</h1>
+  <h1 class="mb-4 fw-bold">Панель управления</h1>
 
-  <div class="row g-3">
+  <div class="row g-4">
     <div class="col-md-6">
-      <div class="card glass h-100">
+      <div class="card glass h-100 shadow-hover">
         <div class="card-body">
-          <h5 class="card-title"><i class="bi bi-journal-text me-2"></i>Мои курсы</h5>
-          <p class="card-text text-secondary">Посмотреть список всех доступных курсов.</p>
-          <a href="{{ url_for('course.list_courses') }}" class="btn btn-gradient">К курсам</a>
+          <div class="badge-soft mb-2"><i class="bi bi-journal-text me-1"></i> Навигация</div>
+          <h4 class="card-title mb-2">Мои курсы</h4>
+          <p class="text-secondary mb-3">Посмотреть список всех доступных курсов и продолжить обучение.</p>
+          <a href="{{ url_for('course.list_courses') }}" class="btn btn-grad"><i class="bi bi-arrow-right-short me-1"></i>К курсам</a>
         </div>
       </div>
     </div>
 
     {% if current_user.role == 'admin' %}
     <div class="col-md-6">
-      <div class="card glass h-100">
+      <div class="card glass h-100 shadow-hover">
         <div class="card-body">
-          <h5 class="card-title"><i class="bi bi-shield-lock me-2"></i>Администрирование</h5>
-          <p class="card-text text-secondary">Управление курсами, модулями и блоками.</p>
-          <a href="{{ url_for('admin.courses_list') }}" class="btn btn-outline-primary">Админ-панель</a>
+          <div class="badge-soft mb-2"><i class="bi bi-shield-lock me-1"></i> Доступ</div>
+          <h4 class="card-title mb-2">Администрирование</h4>
+          <p class="text-secondary mb-3">Управляйте курсами, модулями, блоками, отправками и тестами.</p>
+          <a href="{{ url_for('admin.courses_list') }}" class="btn btn-ghost"><i class="bi bi-tools me-1"></i>Админ-панель</a>
         </div>
       </div>
     </div>
