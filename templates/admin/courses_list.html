@@ -4,7 +4,7 @@
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Курсы</h1>
-    <a href="{{ url_for('admin.course_new') }}" class="btn btn-gradient btn-sm ms-2">
+    <a href="{{ url_for('admin.course_new') }}" class="btn btn-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Создать курс
     </a>
   </div>
@@ -12,12 +12,9 @@
   <div class="row g-3">
     {% for c in courses %}
       <div class="col-md-6">
-        <div class="card glass shadow-sm h-100">
+        <div class="card shadow-sm h-100 border-0">
           <div class="card-body d-flex flex-column">
-            <!-- Заголовок -->
-            <h5 class="card-title fw-bold mb-1 text-light">{{ c.title }}</h5>
-
-            <!-- Дата + статус -->
+            <h5 class="card-title fw-bold mb-1 text-dark">{{ c.title }}</h5>
             <div class="small mb-2 text-muted">
               {{ c.created_at.strftime('%d.%m.%Y %H:%M') }} ·
               {% if c.is_published %}
@@ -26,20 +23,12 @@
                 <span class="badge bg-secondary">Черновик</span>
               {% endif %}
             </div>
-
-            <!-- Описание -->
-            <p class="card-text flex-grow-1 text-light opacity-75">
+            <p class="card-text flex-grow-1 text-secondary">
               {{ c.description|truncate(160, True, '…') }}
             </p>
-
-            <!-- Кнопки -->
             <div class="d-flex gap-2">
-              <a class="btn btn-sm btn-primary" href="{{ url_for('admin.course_edit', course_id=c.id) }}">
-                Редактировать
-              </a>
-              <a class="btn btn-sm btn-outline-light" href="{{ url_for('course.course_view', course_id=c.id) }}" target="_blank">
-                Открыть
-              </a>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.course_edit', course_id=c.id) }}">Редактировать</a>
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('course.course_view', course_id=c.id) }}" target="_blank">Открыть</a>
               <form method="post" action="{{ url_for('admin.course_delete', course_id=c.id) }}" onsubmit="return confirm('Удалить курс?')">
                 <button class="btn btn-sm btn-danger">Удалить</button>
               </form>
@@ -49,9 +38,7 @@
       </div>
     {% else %}
       <div class="col-12">
-        <div class="alert alert-info text-dark bg-info bg-opacity-75 border-0">
-          Курсов нет. Создайте первый.
-        </div>
+        <div class="alert alert-info border-0">Курсов нет. Создайте первый.</div>
       </div>
     {% endfor %}
   </div>

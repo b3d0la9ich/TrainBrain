@@ -1,36 +1,26 @@
-<div id="block-{{ b.id }}" class="card mb-3 glass">
+<div id="block-{{ b.id }}" class="card glass mb-3">
   <div class="card-body">
     <h5 class="card-title">{{ b.payload.title or "Тест" }}</h5>
-    <div class="text-muted small mb-2">
+    <div class="text-secondary small mb-2">
       Проходной балл: {{ b.payload.get('pass_score', 70) }}%.
       {% if b.payload.get('require_pass', True) %}(обязателен для доступа к заданию){% endif %}
     </div>
 
-    {# определяем лучший/последний результат текущего пользователя #}
     {% set ns = namespace(passed=false, best_score=None, last_score=None) %}
     {% for a in b.quiz_attempts %}
       {% if a.user_id == current_user.id %}
         {% set ns.last_score = a.score %}
-        {% if ns.best_score is none or a.score > ns.best_score %}
-          {% set ns.best_score = a.score %}
-        {% endif %}
-        {% if a.passed %}
-          {% set ns.passed = true %}
-        {% endif %}
+        {% if ns.best_score is none or a.score > ns.best_score %}{% set ns.best_score = a.score %}{% endif %}
+        {% if a.passed %}{% set ns.passed = true %}{% endif %}
       {% endif %}
     {% endfor %}
 
     {% if ns.passed %}
-      <div class="alert alert-success mb-0">
-        Тест пройден. Лучший результат: {{ ns.best_score or 0 }}%.
-      </div>
+      <div class="alert alert-success mb-0">Тест пройден. Лучший результат: {{ ns.best_score or 0 }}%.</div>
     {% else %}
       {% if ns.last_score is not none %}
-        <div class="alert alert-warning">
-          Последний результат: {{ ns.last_score }}% — попробуйте ещё раз.
-        </div>
+        <div class="alert alert-warning">Последний результат: {{ ns.last_score }}% — попробуйте ещё раз.</div>
       {% endif %}
-
       <form method="post" action="{{ url_for('course.submit_quiz', block_id=b.id) }}">
         {% for q in b.quiz_questions %}
           <div class="border rounded p-3 mb-3">
@@ -38,9 +28,7 @@
             {% for opt in q.options %}
               <div class="form-check">
                 <input class="form-check-input" type="radio" name="q-{{ q.id }}" id="q{{ q.id }}o{{ opt.id }}" value="{{ opt.id }}">
-                <label class="form-check-label" for="q{{ q.id }}o{{ opt.id }}">
-                  {{ opt.text }}
-                </label>
+                <label class="form-check-label" for="q{{ q.id }}o{{ opt.id }}">{{ opt.text }}</label>
               </div>
             {% endfor %}
           </div>

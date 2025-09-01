@@ -1,4 +1,4 @@
-<div class="card mb-3 glass">
+<div id="block-{{ b.id }}" class="card glass mb-3">
   <div class="card-body">
     <h5 class="card-title">{{ b.payload.title or "Видео" }}</h5>
     {% if b.payload.url %}
@@ -11,7 +11,7 @@
       </video>
     {% endif %}
     {% if b.payload.caption %}
-      <p class="text-secondary small">{{ b.payload.caption }}</p>
+      <p class="text-secondary small mt-2">{{ b.payload.caption }}</p>
     {% endif %}
   </div>
 </div>
