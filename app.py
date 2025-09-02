@@ -1,6 +1,6 @@
 import os
 import click
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort
 from flask_login import (
     LoginManager, login_user, current_user, login_required, logout_user
 )
@@ -23,6 +23,7 @@ def create_app():
         return md(text or "", extensions=["extra", "tables", "fenced_code"])
 
     # --- Конфиг ---
+    app.config.setdefault("ALLOW_INIT_DEMO", True) 
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
     app.config["SUBMISSIONS_REL_PATH"] = "uploads/submissions"
     (Path(app.root_path) / "static" / app.config["SUBMISSIONS_REL_PATH"]).mkdir(parents=True, exist_ok=True)
@@ -112,6 +113,111 @@ def create_app():
     @login_required
     def dashboard():
         return render_template("dashboard.html")
+    
+    @app.get("/init-demo")
+    def init_demo():
+        # Защита: выключи в проде через ALLOW_INIT_DEMO=False
+        if not app.config.get("ALLOW_INIT_DEMO", True):
+            abort(404)
+
+        # ?reset=1 — опционально дропнуть всё (для локалки)
+        do_reset = request.args.get("reset") == "1"
+
+        from models import (
+            db, User, Course, Module, Block,
+            QuizQuestion, QuizOption
+        )
+
+        if do_reset:
+            db.drop_all()
+        db.create_all()
+
+        # --- пользователи ---
+        admin = User.query.filter_by(email="admin@example.com").first()
+        if not admin:
+            admin = User(email="admin@example.com", role="admin")
+            admin.set_password("admin")
+            db.session.add(admin)
+
+        student = User.query.filter_by(email="student@example.com").first()
+        if not student:
+            student = User(email="student@example.com", role="student")
+            student.set_password("student")
+            db.session.add(student)
+
+        # --- курс/модуль/блоки ---
+        course = Course.query.filter_by(title="Python для начинающих").first()
+        if not course:
+            course = Course(
+                title="Python для начинающих",
+                description="Демо-курс: текст, видео, тест и задание.",
+                is_published=True,
+            )
+            db.session.add(course)
+            db.session.flush()
+
+            m1 = Module(course_id=course.id, title="Модуль 1. Старт", order=1)
+            db.session.add(m1)
+            db.session.flush()
+
+            # text
+            b_text = Block(
+                module_id=m1.id, type="text", order=1,
+                payload={
+                    "title": "Краткий гайд по синтаксису",
+                    "text": "### Привет!\n\nЭто **демо-текст**.\n\n```python\nprint('hello')\n```"
+                }
+            )
+            db.session.add(b_text)
+
+            # video (embed)
+            b_video = Block(
+                module_id=m1.id, type="video", order=2,
+                payload={
+                    "title": "Вступительное видео",
+                    "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+                    "src": "",
+                    "caption": "Демо-видео, замени на своё."
+                }
+            )
+            db.session.add(b_video)
+
+            # quiz
+            b_quiz = Block(
+                module_id=m1.id, type="quiz", order=3,
+                payload={"title": "Тест по синтаксису", "pass_score": 70, "require_pass": True}
+            )
+            db.session.add(b_quiz)
+            db.session.flush()
+
+            q1 = QuizQuestion(block_id=b_quiz.id, text="Как оформить цикл в Python?", order=1)
+            q2 = QuizQuestion(block_id=b_quiz.id, text="Какая ОС предустановлена с Python?", order=2)
+            db.session.add_all([q1, q2])
+            db.session.flush()
+
+            db.session.add_all([
+                QuizOption(question_id=q1.id, text="for i in range(10):", is_correct=True),
+                QuizOption(question_id=q1.id, text="for (i=0; i<10; i++)", is_correct=False),
+                QuizOption(question_id=q1.id, text="loop i in range(10)", is_correct=False),
+
+                QuizOption(question_id=q2.id, text="macOS", is_correct=False),
+                QuizOption(question_id=q2.id, text="Linux", is_correct=True),
+                QuizOption(question_id=q2.id, text="Windows", is_correct=False),
+            ])
+
+            # assignment
+            b_ass = Block(
+                module_id=m1.id, type="assignment", order=4,
+                payload={
+                    "title": "Домашка 1",
+                    "instructions": "Напишите скрипт, печатающий чётные числа 0..20, и приложите файл."
+                }
+            )
+            db.session.add(b_ass)
+
+        db.session.commit()
+        return jsonify(ok=True, info="Demo ready. admin/admin, student/student, курс создан.")
+
 
     # --- Blueprints ---
     from routes_course import course_bp
