@@ -17,6 +17,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 SUBMISSION_STATUSES = ["submitted", "checked", "accepted", "rejected", "needs-fix"]
 
+
 def admin_required(func_):
     @wraps(func_)
     def wrapper(*args, **kwargs):
@@ -25,7 +26,9 @@ def admin_required(func_):
         if getattr(current_user, "role", "student") != "admin":
             abort(403)
         return func_(*args, **kwargs)
+
     return wrapper
+
 
 # ---------- Forms ----------
 class CourseForm(FlaskForm):
@@ -34,17 +37,22 @@ class CourseForm(FlaskForm):
     is_published = SelectField("Статус", choices=[("false", "Черновик"), ("true", "Опубликован")])
     submit = SubmitField("Сохранить")
 
+
 class ModuleForm(FlaskForm):
     title = StringField("Название модуля", validators=[DataRequired(), Length(max=255)])
     submit = SubmitField("Сохранить")
 
+
 class BlockForm(FlaskForm):
-    type = SelectField("Тип блока", choices=[
-        ("text", "Текст"),
-        ("video", "Видео"),
-        ("quiz", "Тест"),
-        ("assignment", "Задание"),
-    ])
+    type = SelectField(
+        "Тип блока",
+        choices=[
+            ("text", "Текст"),
+            ("video", "Видео"),
+            ("quiz", "Тест"),
+            ("assignment", "Задание"),
+        ],
+    )
     title = StringField("Заголовок (для text/video/assignment)", validators=[Length(max=255)])
     # text (Markdown/plain)
     text = TextAreaField("Текст (Markdown или обычный)")
@@ -55,10 +63,40 @@ class BlockForm(FlaskForm):
     # assignment
     instructions = TextAreaField("Инструкции (для assignment)")
     # quiz
-    pass_score = SelectField("Проходной балл", choices=[("50","50%"),("60","60%"),("70","70%"),("80","80%"),("90","90%")], default="70")
-    require_pass = SelectField("Требовать прохождение перед заданием?", choices=[("true","Да"),("false","Нет")], default="true")
+    pass_score = SelectField(
+        "Проходной балл",
+        choices=[("50", "50%"), ("60", "60%"), ("70", "70%"), ("80", "80%"), ("90", "90%")],
+        default="70",
+    )
+    require_pass = SelectField(
+        "Требовать прохождение перед заданием?",
+        choices=[("true", "Да"), ("false", "Нет")],
+        default="true",
+    )
 
     submit = SubmitField("Сохранить")
+
+
+def build_video_payload_from_form(form: BlockForm) -> dict:
+    """Собирает payload для видео-блока.
+    Если указан src (MP4), url очищается, чтобы не конфликтовать.
+    """
+    title = form.title.data or ""
+    url = (form.url.data or "").strip()
+    src = (form.src.data or "").strip()
+    caption = form.caption.data or ""
+
+    # Если есть локальный MP4, игнорируем embed-URL
+    if src:
+        url = ""
+
+    return {
+        "title": title,
+        "url": url,
+        "src": src,
+        "caption": caption,
+    }
+
 
 # ---------- Courses ----------
 @admin_bp.route("/courses")
@@ -67,6 +105,7 @@ class BlockForm(FlaskForm):
 def courses_list():
     courses = Course.query.order_by(Course.created_at.desc()).all()
     return render_template("admin/courses_list.html", courses=courses)
+
 
 @admin_bp.route("/courses/new", methods=["GET", "POST"])
 @login_required
@@ -85,6 +124,7 @@ def course_new():
         return redirect(url_for("admin.course_edit", course_id=c.id))
     return render_template("admin/course_form.html", form=form, title="Новый курс")
 
+
 @admin_bp.route("/courses/<int:course_id>/edit", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -99,7 +139,13 @@ def course_edit(course_id):
         flash("Курс сохранён", "success")
         return redirect(url_for("admin.course_edit", course_id=c.id))
     form.is_published.data = "true" if c.is_published else "false"
-    return render_template("admin/course_form.html", form=form, title=f"Редактирование: {c.title}", course=c)
+    return render_template(
+        "admin/course_form.html",
+        form=form,
+        title=f"Редактирование: {c.title}",
+        course=c,
+    )
+
 
 @admin_bp.route("/courses/<int:course_id>/delete", methods=["POST"])
 @login_required
@@ -110,6 +156,7 @@ def course_delete(course_id):
     db.session.commit()
     flash("Курс удалён", "info")
     return redirect(url_for("admin.courses_list"))
+
 
 # ---------- Modules ----------
 @admin_bp.route("/courses/<int:course_id>/modules/new", methods=["GET", "POST"])
@@ -128,6 +175,7 @@ def module_new(course_id):
         return redirect(url_for("admin.course_edit", course_id=c.id))
     return render_template("admin/module_form.html", form=form, course=c, title="Новый модуль")
 
+
 @admin_bp.route("/modules/<int:module_id>/edit", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -139,7 +187,13 @@ def module_edit(module_id):
         db.session.commit()
         flash("Модуль сохранён", "success")
         return redirect(url_for("admin.course_edit", course_id=m.course_id))
-    return render_template("admin/module_form.html", form=form, course=m.course, title=f"Редактирование: {m.title}")
+    return render_template(
+        "admin/module_form.html",
+        form=form,
+        course=m.course,
+        title=f"Редактирование: {m.title}",
+    )
+
 
 @admin_bp.route("/modules/<int:module_id>/delete", methods=["POST"])
 @login_required
@@ -152,6 +206,7 @@ def module_delete(module_id):
     flash("Модуль удалён", "info")
     return redirect(url_for("admin.course_edit", course_id=cid))
 
+
 # ---------- Blocks ----------
 @admin_bp.route("/modules/<int:module_id>/blocks/new", methods=["GET", "POST"])
 @login_required
@@ -160,23 +215,30 @@ def block_new(module_id):
     m = Module.query.get_or_404(module_id)
     form = BlockForm()
     if form.validate_on_submit():
+        # если указали URL или src, а тип не видео — форсим тип "video"
         if form.type.data != "video" and (form.url.data or form.src.data):
             form.type.data = "video"
 
-        max_order = db.session.query(func.max(Block.order)).filter_by(module_id=m.id).scalar()
+        max_order = (
+            db.session.query(func.max(Block.order)).filter_by(module_id=m.id).scalar()
+        )
         next_order = (max_order or 0) + 1
 
         if form.type.data == "text":
             payload = {"title": form.title.data or "", "text": form.text.data or ""}
         elif form.type.data == "video":
-            payload = {"title": form.title.data or "", "url": form.url.data or "",
-                       "src": form.src.data or "", "caption": form.caption.data or ""}
+            payload = build_video_payload_from_form(form)
         elif form.type.data == "assignment":
-            payload = {"title": form.title.data or "", "instructions": form.instructions.data or ""}
+            payload = {
+                "title": form.title.data or "",
+                "instructions": form.instructions.data or "",
+            }
         elif form.type.data == "quiz":
-            payload = {"title": form.title.data or "Тест",
-                       "pass_score": int(form.pass_score.data or 70),
-                       "require_pass": (form.require_pass.data == "true")}
+            payload = {
+                "title": form.title.data or "Тест",
+                "pass_score": int(form.pass_score.data or 70),
+                "require_pass": (form.require_pass.data == "true"),
+            }
         else:
             payload = {"title": form.title.data or "Тест"}
 
@@ -186,6 +248,7 @@ def block_new(module_id):
         flash(f"Блок создан (№{next_order})", "success")
         return redirect(url_for("admin.course_edit", course_id=m.course_id))
     return render_template("admin/block_form.html", form=form, module=m, title="Новый блок")
+
 
 @admin_bp.route("/blocks/<int:block_id>/edit", methods=["GET", "POST"])
 @login_required
@@ -202,9 +265,12 @@ def block_edit(block_id):
         form.caption.data = b.payload.get("caption", "")
         form.instructions.data = b.payload.get("instructions", "")
         form.pass_score.data = str(b.payload.get("pass_score", 70))
-        form.require_pass.data = "true" if b.payload.get("require_pass", True) else "false"
+        form.require_pass.data = (
+            "true" if b.payload.get("require_pass", True) else "false"
+        )
 
     if form.validate_on_submit():
+        # если указали URL или src, а тип не видео — форсим тип "video"
         if form.type.data != "video" and (form.url.data or form.src.data):
             form.type.data = "video"
 
@@ -212,21 +278,31 @@ def block_edit(block_id):
         if b.type == "text":
             b.payload = {"title": form.title.data or "", "text": form.text.data or ""}
         elif b.type == "video":
-            b.payload = {"title": form.title.data or "", "url": form.url.data or "",
-                         "src": form.src.data or "", "caption": form.caption.data or ""}
+            b.payload = build_video_payload_from_form(form)
         elif b.type == "assignment":
-            b.payload = {"title": form.title.data or "", "instructions": form.instructions.data or ""}
+            b.payload = {
+                "title": form.title.data or "",
+                "instructions": form.instructions.data or "",
+            }
         elif b.type == "quiz":
-            b.payload = {"title": form.title.data or "Тест",
-                         "pass_score": int(form.pass_score.data or 70),
-                         "require_pass": (form.require_pass.data == "true")}
+            b.payload = {
+                "title": form.title.data or "Тест",
+                "pass_score": int(form.pass_score.data or 70),
+                "require_pass": (form.require_pass.data == "true"),
+            }
         else:
             b.payload = {"title": form.title.data or "Тест"}
 
         db.session.commit()
         flash("Блок сохранён", "success")
         return redirect(url_for("admin.course_edit", course_id=b.module.course_id))
-    return render_template("admin/block_form.html", form=form, module=b.module, title=f"Редактирование блока #{b.id}")
+    return render_template(
+        "admin/block_form.html",
+        form=form,
+        module=b.module,
+        title=f"Редактирование блока #{b.id}",
+    )
+
 
 @admin_bp.route("/blocks/<int:block_id>/delete", methods=["POST"])
 @login_required
@@ -239,6 +315,7 @@ def block_delete(block_id):
     flash("Блок удалён", "info")
     return redirect(url_for("admin.course_edit", course_id=cid))
 
+
 # ---------- Submissions admin ----------
 @admin_bp.route("/submissions")
 @login_required
@@ -247,13 +324,19 @@ def submissions_list():
     subs = Submission.query.order_by(Submission.created_at.desc()).all()
     return render_template("admin/submissions_list.html", submissions=subs)
 
+
 @admin_bp.route("/blocks/<int:block_id>/submissions")
 @login_required
 @admin_required
 def submissions_by_block(block_id):
     b = Block.query.get_or_404(block_id)
-    subs = Submission.query.filter_by(block_id=block_id).order_by(Submission.created_at.desc()).all()
+    subs = (
+        Submission.query.filter_by(block_id=block_id)
+        .order_by(Submission.created_at.desc())
+        .all()
+    )
     return render_template("admin/submissions_list.html", submissions=subs, block=b)
+
 
 @admin_bp.post("/submissions/<int:submission_id>/update")
 @login_required
@@ -271,6 +354,7 @@ def submission_update(submission_id: int):
     flash("Статус отправки обновлён", "success")
     return redirect(request.referrer or url_for("admin.submissions_list"))
 
+
 # ---------- QUIZ admin ----------
 @admin_bp.route("/quizzes/<int:block_id>")
 @login_required
@@ -281,7 +365,8 @@ def quiz_edit(block_id):
         abort(404)
     return render_template("admin/quiz_questions.html", block=b)
 
-@admin_bp.route("/quizzes/<int:block_id>/questions/new", methods=["GET","POST"])
+
+@admin_bp.route("/quizzes/<int:block_id>/questions/new", methods=["GET", "POST"])
 @login_required
 @admin_required
 def quiz_question_new(block_id):
@@ -293,13 +378,16 @@ def quiz_question_new(block_id):
         if not text:
             flash("Введите текст вопроса", "warning")
             return redirect(url_for("admin.quiz_question_new", block_id=block_id))
-        max_order = db.session.query(func.max(QuizQuestion.order)).filter_by(block_id=b.id).scalar()
-        q = QuizQuestion(block=b, text=text, order=(max_order or 0)+1)
+        max_order = (
+            db.session.query(func.max(QuizQuestion.order)).filter_by(block_id=b.id).scalar()
+        )
+        q = QuizQuestion(block=b, text=text, order=(max_order or 0) + 1)
         db.session.add(q)
         db.session.commit()
         flash("Вопрос добавлен", "success")
         return redirect(url_for("admin.quiz_edit", block_id=b.id))
     return render_template("admin/quiz_question_form.html", block=b, question=None)
+
 
 @admin_bp.route("/quizzes/questions/<int:question_id>/delete", methods=["POST"])
 @login_required
@@ -311,6 +399,7 @@ def quiz_question_delete(question_id):
     db.session.commit()
     flash("Вопрос удалён", "info")
     return redirect(url_for("admin.quiz_edit", block_id=block_id))
+
 
 @admin_bp.route("/quizzes/questions/<int:question_id>/options/new", methods=["POST"])
 @login_required
@@ -326,7 +415,10 @@ def quiz_option_new(question_id):
 
     # мягкая проверка до коммита
     if is_correct and QuizOption.query.filter_by(question_id=q.id, is_correct=True).first():
-        flash("У этого вопроса уже есть правильный вариант. Снимите флажок с прежнего.", "warning")
+        flash(
+            "У этого вопроса уже есть правильный вариант. Снимите флажок с прежнего.",
+            "warning",
+        )
         return redirect(url_for("admin.quiz_edit", block_id=q.block_id))
 
     try:
@@ -335,12 +427,16 @@ def quiz_option_new(question_id):
         flash("Вариант добавлен", "success")
     except (IntegrityError, ValueError):
         db.session.rollback()
-        flash("У этого вопроса уже есть правильный вариант. Снимите флажок с прежнего.", "warning")
+        flash(
+            "У этого вопроса уже есть правильный вариант. Снимите флажок с прежнего.",
+            "warning",
+        )
     except Exception as e:
         db.session.rollback()
         flash(f"Ошибка сохранения: {e}", "danger")
 
     return redirect(url_for("admin.quiz_edit", block_id=q.block_id))
+
 
 @admin_bp.route("/quizzes/options/<int:option_id>/delete", methods=["POST"])
 @login_required
