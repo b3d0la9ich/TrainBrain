@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Результаты тестов — {{ course.title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Результаты тестов — {{ course.title }}</h1>
+    <a href="{{ url_for('admin.course_edit', course_id=course.id) }}" class="btn btn-outline-secondary">← Назад к курсу</a>
+  </div>
+
+  {% if attempts %}
+    <div class="card glass p-3">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Когда</th>
+              <th>Пользователь</th>
+              <th>Модуль</th>
+              <th>Тест</th>
+              <th>Результат</th>
+              <th>Статус</th>
+              <th>Детали по вопросам</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in attempts %}
+              <tr>
+                <td class="text-nowrap">{{ a.submitted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ a.user.email }}</td>
+                <td>#{{ a.block.module.order }} — {{ a.block.module.title }}</td>
+                <td>{{ a.block.payload.get('title', 'Тест #' ~ a.block.id) }}</td>
+                <td>{{ a.score }}%</td>
+                <td>
+                  {% if a.passed %}
+                    <span class="badge bg-success">пройден</span>
+                  {% else %}
+                    <span class="badge bg-danger">не пройден</span>
+                  {% endif %}
+                </td>
+                <td class="small text-muted">
+                  {% for q in a.block.quiz_questions %}
+                    {% set chosen = a.details.get(q.id|string) %}
+                    <div>
+                      Q{{ loop.index }}:
+                      {% if chosen %}
+                        {% set opt = (q.options | selectattr('id', 'equalto', chosen) | list | first) %}
+                        {% if opt %}
+                          {{ opt.text[:40] }}{% if opt.text|length > 40 %}…{% endif %}
+                          {% if opt.is_correct %}
+                            <span class="badge bg-success ms-1">верно</span>
+                          {% else %}
+                            <span class="badge bg-danger ms-1">ошибка</span>
+                          {% endif %}
+                        {% else %}
+                          <span class="text-muted">нет данных по ответу</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="text-muted">без ответа</span>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-secondary mb-0">Пока нет попыток прохождения тестов в этом курсе.</p>
+  {% endif %}
+</div>
+{% endblock %}

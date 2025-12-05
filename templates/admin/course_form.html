@@ -3,15 +3,36 @@
 {% block content %}
 <div class="container py-4">
   <h1 class="mb-3">{{ title }}</h1>
-  <div class="row">
+
+  <div class="row g-3">
     <div class="col-lg-7">
-      <div class="card glass p-3">
+      <div class="card glass p-3 mb-3">
         <form method="post" novalidate>
           {{ form.hidden_tag() }}
-          <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
-          <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows="5") }}</div>
-          <div class="mb-3">{{ form.is_published.label(class="form-label") }}{{ form.is_published(class="form-select") }}</div>
-          {{ form.submit(class="btn btn-gradient") }}
+
+          <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control") }}
+          </div>
+
+          <div class="mb-3">
+            {{ form.short_desc.label(class="form-label") }}
+            {{ form.short_desc(class="form-control", rows="4") }}
+          </div>
+
+          <div class="mb-3">
+            {{ form.status.label(class="form-label") }}
+            {{ form.status(class="form-select") }}
+          </div>
+
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+          <a href="{{ url_for('admin.courses_list') }}" class="btn btn-secondary">Назад</a>
+
+          {% if course %}
+            <form class="d-inline" method="post" action="{{ url_for('admin.course_delete', course_id=course.id) }}" onsubmit="return confirm('Удалить курс?');">
+              <button class="btn btn-outline-danger ms-2">Удалить курс</button>
+            </form>
+          {% endif %}
         </form>
       </div>
     </div>
@@ -19,9 +40,13 @@
     {% if course %}
     <div class="col-lg-5">
       <div class="card glass p-3">
+      <div class="card glass p-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="mb-0">Модули курса</h5>
-          <a href="{{ url_for('admin.module_new', course_id=course.id) }}" class="btn btn-sm btn-primary">+ Модуль</a>
+          <div class="btn-group">
+            <a href="{{ url_for('admin.quiz_attempts', course_id=course.id) }}" class="btn btn-sm btn-outline-secondary">Результаты тестов</a>
+            <a href="{{ url_for('admin.module_new', course_id=course.id) }}" class="btn btn-sm btn-primary">+ Модуль</a>
+          </div>
         </div>
 
         {% for m in course.modules %}
@@ -44,10 +69,10 @@
                     <div>
                       <code>{{ b.type }}</code> · <strong>#{{ b.order }}</strong> — {{ b.payload.get('title','') }}
                       {% if b.type == 'assignment' %}
-                        <span class="badge bg-light text-dark ms-2">Отправок: {{ b.submissions|length }}</span>
+                        <span class="badge bg-info text-dark ms-1">Задание</span>
                       {% elif b.type == 'quiz' %}
-                        <span class="badge bg-info text-dark ms-2">Проходной: {{ b.payload.get('pass_score',70) }}%</span>
-                        {% if b.payload.get('require_pass', True) %}
+                        <span class="badge bg-info text-dark ms-1">Тест</span>
+                        {% if b.require_for_assignment %}
                           <span class="badge bg-warning text-dark ms-1">нужен для задания</span>
                         {% endif %}
                         <span class="badge bg-light text-dark ms-1">Вопросов: {{ b.quiz_questions|length }}</span>

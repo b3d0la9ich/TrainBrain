@@ -12,8 +12,8 @@ from flask_migrate import Migrate
 from models import db, User, Course, Module, Block
 
 from pathlib import Path
-
 from markdown import markdown as md
+
 
 def create_app():
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -23,10 +23,18 @@ def create_app():
         return md(text or "", extensions=["extra", "tables", "fenced_code"])
 
     # --- Конфиг ---
-    app.config.setdefault("ALLOW_INIT_DEMO", True) 
+    app.config.setdefault("ALLOW_INIT_DEMO", True)
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
     app.config["SUBMISSIONS_REL_PATH"] = "uploads/submissions"
-    (Path(app.root_path) / "static" / app.config["SUBMISSIONS_REL_PATH"]).mkdir(parents=True, exist_ok=True)
+    (Path(app.root_path) / "static" / app.config["SUBMISSIONS_REL_PATH"]).mkdir(
+        parents=True, exist_ok=True
+    )
+
+    # для картинок внутри текстовых блоков
+    app.config["CONTENT_IMAGES_REL_PATH"] = "uploads/content"
+    (Path(app.root_path) / "static" / app.config["CONTENT_IMAGES_REL_PATH"]).mkdir(
+        parents=True, exist_ok=True
+    )
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "secretkey")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
@@ -37,18 +45,19 @@ def create_app():
 
     # --- Инициализация ---
     db.init_app(app)
-
-    with app.app_context():
-        db.create_all()
-
-    Migrate(app, db)
+    Migrate(app, db)  # без db.create_all() тут
 
     login_manager = LoginManager(app)
     login_manager.login_view = "login"
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        # На случай, если таблиц ещё нет / миграции не применены
+        try:
+            return db.session.get(User, int(user_id))
+        except Exception:
+            db.session.rollback()
+            return None
 
     # --- Формы ---
     class RegisterForm(FlaskForm):
@@ -113,7 +122,7 @@ def create_app():
     @login_required
     def dashboard():
         return render_template("dashboard.html")
-    
+
     @app.get("/init-demo")
     def init_demo():
         # Защита: выключи в проде через ALLOW_INIT_DEMO=False
@@ -136,13 +145,13 @@ def create_app():
         admin = User.query.filter_by(email="admin@example.com").first()
         if not admin:
             admin = User(email="admin@example.com", role="admin")
-            admin.set_password("admin")
+            admin.set_password("admin123")
             db.session.add(admin)
 
         student = User.query.filter_by(email="student@example.com").first()
         if not student:
             student = User(email="student@example.com", role="student")
-            student.set_password("student")
+            student.set_password("student123")
             db.session.add(student)
 
         # --- курс/модуль/блоки ---
@@ -217,7 +226,6 @@ def create_app():
 
         db.session.commit()
         return jsonify(ok=True, info="Demo ready. admin/admin, student/student, курс создан.")
-
 
     # --- Blueprints ---
     from routes_course import course_bp

@@ -19,38 +19,52 @@
 
         <!-- TEXT -->
         <div class="col-12 for-text">
-          {{ form.text.label(class="form-label") }}
-          {{ form.text(class="form-control", rows="8", placeholder="Можно обычный текст или Markdown: **жирный**, списки, ```код``` и т.п.") }}
-          <div class="form-text">Используется в блоке типа «Текст». Поддерживается Markdown.</div>
+          <div class="d-flex justify-content-between align-items-center">
+            {{ form.text.label(class="form-label mb-1") }}
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-insert-image">
+              Вставить картинку
+            </button>
+          </div>
+          {{ form.text(
+                class="form-control",
+                id="text",
+                rows="20",
+                style="min-height: 320px; font-family: monospace;",
+                placeholder="Основной текст или Markdown: **жирный**, списки, ```код```, изображения и т.п."
+          ) }}
+          <input type="file" id="image-upload" accept="image/*"
+                 class="form-control form-control-sm mt-2"
+                 style="max-width: 320px;">
+          <div id="image-preview" class="mt-2"></div>
+          <div class="form-text">
+            Используется в блоке типа «Текст». Поддерживается Markdown (в том числе картинки через
+            <code>![alt](url)</code>).
+          </div>
         </div>
 
         <!-- VIDEO -->
-        <div class="col-md-6 for-video">
-          {{ form.url.label(class="form-label") }}
-          {{ form.url(class="form-control") }}
-          <div class="form-text">Embed URL (YouTube/Vimeo)</div>
-        </div>
-        <div class="col-md-6 for-video">
-          {{ form.src.label(class="form-label") }}
-          {{ form.src(class="form-control") }}
-          <div class="form-text">Прямой MP4</div>
-        </div>
         <div class="col-12 for-video">
-          {{ form.caption.label(class="form-label") }}
-          {{ form.caption(class="form-control") }}
+          {{ form.video_url.label(class="form-label") }}
+          {{ form.video_url(class="form-control") }}
+          <div class="form-text">
+            Ссылка на видео (YouTube, Vimeo и т.п.) для блока типа «Видео».
+          </div>
         </div>
 
         <!-- ASSIGNMENT -->
         <div class="col-12 for-assignment">
-          {{ form.instructions.label(class="form-label") }}
-          {{ form.instructions(class="form-control", rows="4") }}
-          <div class="form-text">Инструкции для задания</div>
+          {{ form.assignment_prompt.label(class="form-label") }}
+          {{ form.assignment_prompt(class="form-control", rows="10") }}
+          <div class="form-text">
+            Текст задания и инструкции для студента.
+          </div>
         </div>
+
       </div>
 
       <div class="mt-3">
-        {{ form.submit(class="btn btn-gradient") }}
-        <a class="btn btn-outline-secondary ms-2" href="{{ url_for('admin.course_edit', course_id=module.course_id) }}">Назад к курсу</a>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="{{ url_for('admin.course_edit', course_id=module.course_id) }}" class="btn btn-secondary">Отмена</a>
       </div>
     </form>
   </div>
@@ -63,6 +77,7 @@
   const hide = sel => document.querySelectorAll(sel).forEach(e => e.style.display = 'none');
 
   function toggleByType() {
+    if (!$type) return;
     const t = $type.value;
     hide('.for-text, .for-video, .for-assignment');
     if (t === 'text') show('.for-text');
@@ -70,8 +85,80 @@
     if (t === 'assignment') show('.for-assignment');
   }
 
+  // Загрузка картинок и вставка Markdown-ссылки в текстовый блок
+  const textarea = document.getElementById('text');
+  const fileInput = document.getElementById('image-upload');
+  const btnInsert = document.getElementById('btn-insert-image');
+  const preview = document.getElementById('image-preview');
+
+  if (textarea && fileInput && btnInsert) {
+    btnInsert.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async function() {
+      if (!fileInput.files.length) return;
+
+      const alt = window.prompt("Подпись к изображению (необязательно):", "") || "";
+
+      const formData = new FormData();
+      formData.append('image', fileInput.files[0]);
+      try {
+        const resp = await fetch('{{ url_for("admin.upload_image") }}', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!resp.ok) {
+          alert('Ошибка загрузки изображения');
+          return;
+        }
+        const data = await resp.json();
+        if (!data.url) {
+          alert('Сервер не вернул URL изображения');
+          return;
+        }
+
+        // Markdown для вставки — с переводами строк, чтобы не лепилось к тексту
+        const md = `\n\n![${alt}](${data.url})\n\n`;
+        const start = textarea.selectionStart ?? textarea.value.length;
+        const end = textarea.selectionEnd ?? textarea.value.length;
+        textarea.value = textarea.value.slice(0, start) + md + textarea.value.slice(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + md.length;
+
+        // Превью под полем
+        if (preview) {
+          const wrap = document.createElement('div');
+          wrap.className = 'mt-2';
+
+          const img = document.createElement('img');
+          img.src = data.url;
+          img.alt = alt;
+          img.className = 'img-thumbnail';
+          img.style.maxWidth = '240px';
+          img.style.height = 'auto';
+
+          const cap = document.createElement('div');
+          cap.className = 'small text-muted';
+          cap.textContent = alt || 'Изображение будет показано в тексте.';
+
+          wrap.appendChild(img);
+          wrap.appendChild(cap);
+          preview.appendChild(wrap);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Произошла ошибка при загрузке изображения');
+      } finally {
+        fileInput.value = '';
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', toggleByType);
-  $type.addEventListener('change', toggleByType);
+  if ($type) {
+    $type.addEventListener('change', toggleByType);
+  }
 })();
 </script>
 {% endblock %}
