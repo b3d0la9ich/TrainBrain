@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка отправки{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <h1 class="mb-3">Проверка отправки</h1>
+
+  <a href="{{ url_for('admin.submissions_list') }}" class="btn btn-secondary mb-3">← Назад</a>
+
+  <div class="card glass p-3 mb-4">
+    <h5 class="mb-2">Отправка #{{ submission.id }}</h5>
+
+    <p class="mb-1">
+      <strong>Пользователь:</strong> {{ submission.user.full_name if submission.user else "—" }}
+    </p>
+
+    <p class="mb-1">
+      <strong>Блок:</strong>
+      {{ submission.block.payload.get('title', submission.block.type) }}
+    </p>
+
+    <p class="mb-1">
+      <strong>Дата отправки:</strong>
+      {{ submission.created_at.strftime("%d.%m.%Y %H:%M") }}
+    </p>
+
+    <p class="mb-1">
+      <strong>Файл:</strong>
+      {% if submission.stored_path %}
+        <a href="{{ url_for('static', filename=submission.stored_path) }}" target="_blank">
+          {{ submission.original_name }}
+        </a>
+      {% else %}
+        <span class="text-secondary">нет файла</span>
+      {% endif %}
+    </p>
+
+    <p class="mb-3">
+      <strong>Размер:</strong>
+      {{ (submission.size_bytes or 0) // 1024 }} КБ
+    </p>
+
+    <hr>
+
+    <h5>Обновить статус</h5>
+
+    <form method="post">
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.comment.label(class="form-label") }}
+        {{ form.comment(class="form-control", rows="3") }}
+      </div>
+
+      <button class="btn btn-primary">Сохранить</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

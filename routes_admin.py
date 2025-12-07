@@ -46,8 +46,8 @@ class CourseForm(FlaskForm):
 
 
 class ModuleForm(FlaskForm):
+    # порядок теперь считаем автоматически, поэтому только заголовок
     title = StringField("Название модуля", validators=[DataRequired(), Length(max=255)])
-    order = StringField("Порядок", validators=[DataRequired()])
     submit = SubmitField("Сохранить")
 
 
@@ -121,17 +121,16 @@ def courses_list():
 def course_new():
     form = CourseForm()
     if form.validate_on_submit():
-        max_order = db.session.query(func.coalesce(func.max(Course.order), 0)).scalar()
         course = Course(
             title=form.title.data.strip(),
-            short_desc=form.short_desc.data.strip(),
-            status=form.status.data,
-            order=max_order + 1,
+            description=(form.short_desc.data or "").strip(),
+            is_published=(form.status.data == "published"),
         )
         db.session.add(course)
         db.session.commit()
         flash("Курс создан", "success")
         return redirect(url_for("admin.course_edit", course_id=course.id))
+
     return render_template("admin/course_form.html", form=form, course=None, title="Новый курс")
 
 
@@ -141,14 +140,25 @@ def course_new():
 def course_edit(course_id):
     course = Course.query.get_or_404(course_id)
     form = CourseForm(obj=course)
+
+    if request.method == "GET":
+        form.short_desc.data = course.description or ""
+        form.status.data = "published" if course.is_published else "draft"
+
     if form.validate_on_submit():
         course.title = form.title.data.strip()
-        course.short_desc = form.short_desc.data.strip()
-        course.status = form.status.data
+        course.description = (form.short_desc.data or "").strip()
+        course.is_published = (form.status.data == "published")
         db.session.commit()
         flash("Курс обновлён", "success")
         return redirect(url_for("admin.course_edit", course_id=course.id))
-    return render_template("admin/course_form.html", form=form, course=course, title="Редактирование курса")
+
+    return render_template(
+        "admin/course_form.html",
+        form=form,
+        course=course,
+        title="Редактирование курса",
+    )
 
 
 @admin_bp.route("/courses/<int:course_id>/delete", methods=["POST"])
@@ -178,11 +188,9 @@ def module_new(course_id):
         )
         module = Module(
             title=form.title.data.strip(),
-            order=int(form.order.data),
             course_id=course.id,
+            order=max_order + 1,
         )
-        if module.order <= 0:
-            module.order = max_order + 1
         db.session.add(module)
         db.session.commit()
         flash("Модуль создан", "success")
@@ -198,10 +206,6 @@ def module_edit(module_id):
     form = ModuleForm(obj=module)
     if form.validate_on_submit():
         module.title = form.title.data.strip()
-        try:
-            module.order = int(form.order.data)
-        except ValueError:
-            flash("Порядок должен быть числом", "warning")
         db.session.commit()
         flash("Модуль обновлён", "success")
         return redirect(url_for("admin.course_edit", course_id=module.course_id))
@@ -497,7 +501,6 @@ def quiz_option_new(question_id):
         try:
             db.session.commit()
         except ValueError as e:
-            # ловим ошибку из ORM-хука _ensure_single_correct
             db.session.rollback()
             flash(str(e) or "У этого вопроса уже есть правильный вариант ответа.", "danger")
         except IntegrityError:
