@@ -1,16 +1,38 @@
-FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# ======= STAGE 1: build (Go) =======
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
 
+# Нужен git для скачивания модулей
+RUN apk add --no-cache git
+
+# Чтобы не упираться в proxy.golang.org
+ENV GOPROXY=https://goproxy.io,direct
+
+# Тащим весь проект
 COPY . .
 
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
+# Подтягиваем зависимости / генерим go.sum
+RUN go mod tidy
+
+# Собираем бинарник
+RUN go build -o server .
+
+# ======= STAGE 2: runtime =======
+FROM alpine:3.20
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Копируем бинарник
+COPY --from=builder /app/server .
+
+# Копируем шаблоны и статику из билд-стейджа
+COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/static ./static
+
+ENV PORT=5001
 EXPOSE 5001
 
-CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:5001", "app:app"]
+CMD ["./server"]

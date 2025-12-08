@@ -1,40 +1,55 @@
-<div id="block-{{ b.id }}" class="card glass mb-3">
+{{ define "blocks/quiz.html" }}
+<div id="block-{{ .ID }}" class="card glass mb-3">
   <div class="card-body">
-    <h5 class="card-title">{{ b.payload.title or "Тест" }}</h5>
+    <h5 class="card-title">
+      {{ if .Title }}{{ .Title }}{{ else }}Тест{{ end }}
+    </h5>
+
     <div class="text-secondary small mb-2">
-      Проходной балл: {{ b.payload.get('pass_score', 70) }}%.
-      {% if b.payload.get('require_pass', True) %}(обязателен для доступа к заданию){% endif %}
+      Проходной балл: {{ .PassScore }}%.
+      {{ if .RequirePass }}(обязателен для доступа к заданию){{ end }}
     </div>
 
-    {% set ns = namespace(passed=false, best_score=None, last_score=None) %}
-    {% for a in b.quiz_attempts %}
-      {% if a.user_id == current_user.id %}
-        {% set ns.last_score = a.score %}
-        {% if ns.best_score is none or a.score > ns.best_score %}{% set ns.best_score = a.score %}{% endif %}
-        {% if a.passed %}{% set ns.passed = true %}{% endif %}
-      {% endif %}
-    {% endfor %}
+    {{ if .Passed }}
+      <div class="alert alert-success mb-0">
+        Тест пройден. Лучший результат: {{ printf "%.0f" .BestScore }}%.
+      </div>
+    {{ else }}
+      {{ if .HasLastScore }}
+        <div class="alert alert-warning">
+          Последний результат: {{ printf "%.0f" .LastScore }}% — попробуйте ещё раз.
+        </div>
+      {{ end }}
 
-    {% if ns.passed %}
-      <div class="alert alert-success mb-0">Тест пройден. Лучший результат: {{ ns.best_score or 0 }}%.</div>
-    {% else %}
-      {% if ns.last_score is not none %}
-        <div class="alert alert-warning">Последний результат: {{ ns.last_score }}% — попробуйте ещё раз.</div>
-      {% endif %}
-      <form method="post" action="{{ url_for('course.submit_quiz', block_id=b.id) }}">
-        {% for q in b.quiz_questions %}
+      <form method="post" action="/blocks/{{ .ID }}/quiz">
+        {{ range $i, $q := .Questions }}
           <div class="border rounded p-3 mb-3">
-            <div class="fw-semibold mb-2">Вопрос {{ loop.index }}. {{ q.text }}</div>
-            {% for opt in q.options %}
+            <div class="fw-semibold mb-2">
+              Вопрос {{ add $i 1 }}. {{ $q.Text }}
+            </div>
+
+            {{ range $j, $opt := $q.Options }}
               <div class="form-check">
-                <input class="form-check-input" type="radio" name="q-{{ q.id }}" id="q{{ q.id }}o{{ opt.id }}" value="{{ opt.id }}">
-                <label class="form-check-label" for="q{{ q.id }}o{{ opt.id }}">{{ opt.text }}</label>
+                <input class="form-check-input"
+                       type="radio"
+                       name="q-{{ $q.ID }}"
+                       id="q{{ $q.ID }}o{{ $opt.ID }}"
+                       value="{{ $opt.ID }}">
+                <label class="form-check-label"
+                       for="q{{ $q.ID }}o{{ $opt.ID }}">
+                  {{ $opt.Text }}
+                </label>
               </div>
-            {% endfor %}
+            {{ end }}
+
           </div>
-        {% endfor %}
-        <button class="btn btn-gradient">Отправить ответы</button>
+        {{ end }}
+
+        <button class="btn btn-gradient" type="submit">
+          Отправить ответы
+        </button>
       </form>
-    {% endif %}
+    {{ end }}
   </div>
 </div>
+{{ end }}

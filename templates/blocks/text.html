@@ -1,11 +1,15 @@
-<div id="block-{{ b.id }}" class="card glass mb-3">
+{{ define "blocks/text.html" }}
+<div id="block-{{ .ID }}" class="card glass mb-3">
   <div class="card-body">
-    <h5 class="card-title">{{ b.payload.title }}</h5>
-    {% if b.payload.text %}
-      <div class="card-text">{{ b.payload.text | md | safe }}</div>
-    {% elif b.payload.html %}
-      <div class="card-text">{{ b.payload.html | safe }}</div>
-    {% endif %}
+    {{ if .Title }}
+      <h5 class="card-title">{{ .Title }}</h5>
+    {{ end }}
+
+    {{ if .HTML }}
+      <div class="card-text">
+        {{ .HTML }}
+      </div>
+    {{ end }}
   </div>
 </div>
-  
+{{ end }}

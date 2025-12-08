@@ -1,45 +1,52 @@
-{% extends "base.html" %}
+{{ define "title" }}Проверка отправки{{ end }}
 
-{% block title %}Проверка отправки{% endblock %}
-
-{% block content %}
+{{ define "content" }}
 <div class="container py-4">
 
   <h1 class="mb-3">Проверка отправки</h1>
 
-  <a href="{{ url_for('admin.submissions_list') }}" class="btn btn-secondary mb-3">← Назад</a>
+  <a href="/admin/submissions" class="btn btn-secondary mb-3">← Назад</a>
 
   <div class="card glass p-3 mb-4">
-    <h5 class="mb-2">Отправка #{{ submission.id }}</h5>
+    <h5 class="mb-2">Отправка #{{ .Submission.ID }}</h5>
 
     <p class="mb-1">
-      <strong>Пользователь:</strong> {{ submission.user.full_name if submission.user else "—" }}
+      <strong>Пользователь:</strong>
+      {{ if .Submission.User.ID }}
+        {{ .Submission.User.Email }}
+      {{ else }}
+        —
+      {{ end }}
     </p>
 
     <p class="mb-1">
       <strong>Блок:</strong>
-      {{ submission.block.payload.get('title', submission.block.type) }}
+      {{ if .Submission.Block.Payload.title }}
+        {{ .Submission.Block.Payload.title }}
+      {{ else }}
+        {{ .Submission.Block.Type }}
+      {{ end }}
     </p>
 
     <p class="mb-1">
       <strong>Дата отправки:</strong>
-      {{ submission.created_at.strftime("%d.%m.%Y %H:%M") }}
+      {{ .Submission.CreatedAt.Format "02.01.2006 15:04" }}
     </p>
 
     <p class="mb-1">
       <strong>Файл:</strong>
-      {% if submission.stored_path %}
-        <a href="{{ url_for('static', filename=submission.stored_path) }}" target="_blank">
-          {{ submission.original_name }}
+      {{ if .Submission.StoredPath }}
+        <a href="/static/{{ .Submission.StoredPath }}" target="_blank">
+          {{ .Submission.OriginalName }}
         </a>
-      {% else %}
+      {{ else }}
         <span class="text-secondary">нет файла</span>
-      {% endif %}
+      {{ end }}
     </p>
 
     <p class="mb-3">
       <strong>Размер:</strong>
-      {{ (submission.size_bytes or 0) // 1024 }} КБ
+      {{ .SizeKB }} КБ
     </p>
 
     <hr>
@@ -47,21 +54,30 @@
     <h5>Обновить статус</h5>
 
     <form method="post">
-      {{ form.hidden_tag() }}
-
       <div class="mb-3">
-        {{ form.status.label(class="form-label") }}
-        {{ form.status(class="form-select") }}
+        <label for="status" class="form-label">Статус</label>
+        <select id="status" name="status" class="form-select">
+          {{ range $i, $s := .Statuses }}
+            <option value="{{ $s }}"
+              {{ if eq $.Submission.Status $s }}selected{{ end }}>
+              {{ $s }}
+            </option>
+          {{ end }}
+        </select>
       </div>
 
       <div class="mb-3">
-        {{ form.comment.label(class="form-label") }}
-        {{ form.comment(class="form-control", rows="3") }}
+        <label for="comment" class="form-label">Комментарий проверяющего</label>
+        <textarea
+          id="comment"
+          name="comment"
+          class="form-control"
+          rows="3">{{ .Submission.Comment }}</textarea>
       </div>
 
-      <button class="btn btn-primary">Сохранить</button>
+      <button class="btn btn-primary" type="submit">Сохранить</button>
     </form>
   </div>
 
 </div>
-{% endblock %}
+{{ end }}

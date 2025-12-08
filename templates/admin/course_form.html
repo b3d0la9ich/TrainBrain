@@ -1,143 +1,207 @@
-{% extends "base.html" %}
-{% block title %}{{ title }}{% endblock %}
+{{define "admin/course_form.html"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>{{.title}} — Панель администратора</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-light">
 
-{% block content %}
-<div class="container py-4">
-  <h1 class="mb-3">{{ title }}</h1>
-
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="card glass p-3 mb-3">
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-
-          <div class="mb-3">
-            {{ form.title.label(class="form-label") }}
-            {{ form.title(class="form-control") }}
-          </div>
-
-          <div class="mb-3">
-            {{ form.short_desc.label(class="form-label") }}
-            {{ form.short_desc(class="form-control", rows="4") }}
-          </div>
-
-          <div class="mb-3">
-            {{ form.status.label(class="form-label") }}
-            {{ form.status(class="form-select") }}
-          </div>
-
-          <button type="submit" class="btn btn-primary">Сохранить</button>
-          <a href="{{ url_for('admin.courses_list') }}" class="btn btn-secondary">Назад</a>
-        </form>
-
-        {% if course %}
-          <form class="d-inline mt-2"
-                method="post"
-                action="{{ url_for('admin.course_delete', course_id=course.id) }}"
-                onsubmit="return confirm('Удалить курс?');">
-            <button class="btn btn-outline-danger ms-2">Удалить курс</button>
-          </form>
-        {% endif %}
-      </div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/admin/">TrainBrain Admin</a>
+    <div class="ms-auto d-flex gap-2">
+      <a class="btn btn-outline-light btn-sm" href="/">На сайт</a>
+      <a class="btn btn-outline-warning btn-sm" href="/logout">Выйти</a>
     </div>
+  </div>
+</nav>
 
-    {% if course %}
-    <div class="col-lg-5">
-      <div class="card glass p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">Модули курса</h5>
-          <div class="btn-group">
-            <a href="{{ url_for('admin.quiz_attempts', course_id=course.id) }}"
-               class="btn btn-sm btn-outline-secondary">
-              Результаты тестов
-            </a>
-            <a href="{{ url_for('admin.module_new', course_id=course.id) }}"
-               class="btn btn-sm btn-primary">
-              + Модуль
-            </a>
-          </div>
+<div class="container py-4">
+
+  <div class="mb-3">
+    <h1 class="h3 mb-0">{{.title}}</h1>
+    {{if .course}}
+    {{end}}
+  </div>
+
+  {{if .Error}}
+    <div class="alert alert-danger">{{.Error}}</div>
+  {{end}}
+
+  <!-- ФОРМА КУРСА -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">Название курса</label>
+          <input type="text" name="title" class="form-control"
+                 value="{{if .course}}{{.course.Title}}{{end}}" required>
         </div>
 
-        {% for m in course.modules %}
-          <div class="border rounded p-2 mb-2 bg-white">
-            <div class="d-flex justify-content-between align-items-center">
-              <div><strong>#{{ m.order }}</strong> — {{ m.title }}</div>
-              <div class="ms-2">
-                <a class="btn btn-sm btn-outline-primary"
-                   href="{{ url_for('admin.module_edit', module_id=m.id) }}">
-                  Ред.
-                </a>
-                <form class="d-inline"
-                      method="post"
-                      action="{{ url_for('admin.module_delete', module_id=m.id) }}"
-                      onsubmit="return confirm('Удалить модуль?');">
-                  <button class="btn btn-sm btn-outline-danger">×</button>
-                </form>
-              </div>
-            </div>
+        <div class="mb-3">
+          <label class="form-label">Краткое описание</label>
+          <textarea name="short_desc" class="form-control" rows="3">{{if .course}}{{.course.ShortDesc}}{{end}}</textarea>
+        </div>
 
-            <div class="mt-2">
-              <a class="btn btn-sm btn-secondary"
-                 href="{{ url_for('admin.block_new', module_id=m.id) }}">
-                + Блок
-              </a>
-              {% for b in m.blocks %}
-                <div class="mt-2 p-2 border rounded bg-white">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <code>{{ b.type }}</code> ·
-                      <strong>#{{ b.order }}</strong> —
-                      {{ b.payload.get('title','') }}
-                      {% if b.type == 'assignment' %}
-                        <span class="badge bg-info text-dark ms-1">Задание</span>
-                      {% elif b.type == 'quiz' %}
-                        <span class="badge bg-info text-dark ms-1">Тест</span>
-                        {% if b.require_for_assignment %}
-                          <span class="badge bg-warning text-dark ms-1">
-                            нужен для задания
-                          </span>
-                        {% endif %}
-                        <span class="badge bg-light text-dark ms-1">
-                          Вопросов: {{ b.quiz_questions|length }}
-                        </span>
-                      {% endif %}
-                    </div>
-                    <div class="ms-2">
-                      <a class="btn btn-sm btn-outline-primary"
-                         href="{{ url_for('admin.block_edit', block_id=b.id) }}">
-                        Ред.
-                      </a>
-                      {% if b.type == 'assignment' %}
-                        <a class="btn btn-sm btn-outline-dark"
-                           href="{{ url_for('admin.submissions_by_block', block_id=b.id) }}">
-                          Отправки
-                        </a>
-                      {% elif b.type == 'quiz' %}
-                        <a class="btn btn-sm btn-outline-dark"
-                           href="{{ url_for('admin.quiz_edit', block_id=b.id) }}">
-                          Вопросы
-                        </a>
-                      {% endif %}
-                      <form class="d-inline"
-                            method="post"
-                            action="{{ url_for('admin.block_delete', block_id=b.id) }}"
-                            onsubmit="return confirm('Удалить блок?');">
-                        <button class="btn btn-sm btn-outline-danger">×</button>
-                      </form>
-                    </div>
-                  </div>
+        <div class="mb-3">
+          <label class="form-label">Статус</label>
+          <select name="status" class="form-select">
+            <option value="draft"
+              {{if or (not .course) (eq .course.Status "draft")}}selected{{end}}>
+              Черновик
+            </option>
+            <option value="published"
+              {{if and .course (eq .course.Status "published")}}selected{{end}}>
+              Опубликован
+            </option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save me-1"></i> Сохранить
+        </button>
+        <a href="/admin/courses" class="btn btn-outline-secondary ms-2">К списку курсов</a>
+      </form>
+    </div>
+  </div>
+
+  {{if .course}}
+  <!-- МОДУЛИ КУРСА -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 mb-0">Модули курса</h2>
+    <a href="/admin/courses/{{.course.ID}}/modules/new" class="btn btn-sm btn-success">
+      <i class="bi bi-plus-lg me-1"></i> Добавить модуль
+    </a>
+  </div>
+
+  {{if .course.Modules}}
+    <div class="accordion" id="modulesAccordion">
+      {{range $i, $m := .course.Modules}}
+        <div class="accordion-item mb-2">
+          <h2 class="accordion-header" id="heading-{{$m.ID}}">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse-{{$m.ID}}"
+                    aria-expanded="false"
+                    aria-controls="collapse-{{$m.ID}}">
+              <span class="me-2 text-muted">#{{$m.Order}}</span>
+              {{$m.Title}}
+            </button>
+          </h2>
+          <div id="collapse-{{$m.ID}}" class="accordion-collapse collapse"
+               aria-labelledby="heading-{{$m.ID}}"
+               data-bs-parent="#modulesAccordion">
+            <div class="accordion-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="text-muted">
+                  Блоков: {{len $m.Blocks}}
                 </div>
-              {% else %}
-                <div class="text-secondary small mt-2">Нет блоков</div>
-              {% endfor %}
+                <div class="btn-group">
+                  <a href="/admin/modules/{{$m.ID}}/edit"
+                     class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Редактировать модуль
+                  </a>
+                  <form method="post"
+                        action="/admin/modules/{{$m.ID}}/delete"
+                        onsubmit="return confirm('Удалить модуль {{$m.Title}}?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <hr>
+
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="h6 mb-0">Блоки модуля</h3>
+                <a href="/admin/modules/{{$m.ID}}/blocks/new"
+                   class="btn btn-sm btn-outline-success">
+                  <i class="bi bi-plus-lg"></i> Добавить блок
+                </a>
+              </div>
+
+              {{if $m.Blocks}}
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Тип</th>
+                        <th>Заголовок</th>
+                        <th class="text-end">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    {{range $m.Blocks}}
+                      <tr>
+                        <td>{{.Order}}</td>
+                        <td>
+                          {{if eq .Type "text"}}Текст
+                          {{else if eq .Type "video"}}Видео
+                          {{else if eq .Type "quiz"}}Тест
+                          {{else if eq .Type "assignment"}}Задание
+                          {{else}}{{.Type}}{{end}}
+                        </td>
+                        <td>{{.ID}}</td>
+
+                        <td class="text-end">
+
+                          {{if eq .Type "quiz"}}
+                            <a href="/admin/quizzes/{{.ID}}"
+                               class="btn btn-sm btn-outline-success me-1">
+                              <i class="bi bi-question-circle"></i> Вопросы
+                            </a>
+                          {{end}}
+
+                          <a href="/admin/blocks/{{.ID}}/edit"
+                             class="btn btn-sm btn-outline-primary me-1">
+                            <i class="bi bi-pencil"></i>
+                          </a>
+
+                          <form method="post"
+                                action="/admin/blocks/{{.ID}}/delete"
+                                class="d-inline"
+                                onsubmit="return confirm('Удалить блок?');">
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-danger">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    {{end}}
+                    </tbody>
+                  </table>
+                </div>
+              {{else}}
+                <div class="text-muted">
+                  В этом модуле ещё нет блоков.
+                </div>
+              {{end}}
             </div>
           </div>
-        {% else %}
-          <div class="text-secondary">Нет модулей</div>
-        {% endfor %}
-      </div>
+        </div>
+      {{end}}
     </div>
-    {% endif %}
-  </div>
+  {{else}}
+    <div class="alert alert-info">
+      В этом курсе пока нет модулей. Нажми «Добавить модуль».
+    </div>
+  {{end}}
+  {{end}}
+
+  <a href="/admin/courses" class="btn btn-link mt-4">&larr; К списку курсов</a>
 </div>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}

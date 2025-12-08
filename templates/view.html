@@ -1,58 +1,62 @@
-{% extends "base.html" %}
-{% block title %}{{ course.title }}{% endblock %}
-{% block content %}
+{{ define "title" }}{{ .Course.Title }}{{ end }}
+
+{{ define "content" }}
 <div class="container py-4">
-  <h1>{{ course.title }}</h1>
-  <p class="text-muted">{{ course.description }}</p>
+  <h1>{{ .Course.Title }}</h1>
+  <p class="text-muted">{{ .Course.ShortDesc }}</p>
 
-  {% for m in course.modules %}
-    <h3 class="mt-4">Модуль {{ m.order }}: {{ m.title }}</h3>
+  {{ if .Course.Modules }}
+    {{ range $mi, $m := .Course.Modules }}
+      <h3 class="mt-4">Модуль {{ $m.Order }}: {{ $m.Title }}</h3>
 
-    {% for b in m.blocks %}
-      <div class="glass p-3 mb-3">
-        {% if b.type == "text" %}
-          <h5>{{ b.payload.title }}</h5>
-          <div>{{ b.payload.html | safe }}</div>
+      {{ if $m.Blocks }}
+        {{ range $bi, $b := $m.Blocks }}
+          <div class="glass p-3 mb-3">
+            {{ if eq $b.Type "text" }}
+              <h5>{{ $b.Payload.Title }}</h5>
+              <div>{{ $b.Payload.HTML }}</div>
 
-        {% elif b.type == "video" %}
-          <h5>{{ b.payload.title }}</h5>
+            {{ else if eq $b.Type "video" }}
+              <h5>{{ $b.Payload.Title }}</h5>
 
-          {% if b.payload.url %}
-            {# YouTube / Vimeo embed #}
-            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;">
-              <iframe
-                src="{{ b.payload.url }}"
-                style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen>
-              </iframe>
-            </div>
+              {{ if $b.Payload.URL }}
+                <!-- YouTube / Vimeo embed -->
+                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;">
+                  <iframe
+                    src="{{ $b.Payload.URL }}"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen>
+                  </iframe>
+                </div>
 
-          {% elif b.payload.src %}
-            {# Загруженный mp4-файл #}
-            <video controls class="w-100" style="border-radius:12px;">
-              <source src="{{ b.payload.src }}" type="video/mp4">
-              Ваш браузер не поддерживает тег video.
-            </video>
-          {% endif %}
+              {{ else if $b.Payload.Src }}
+                <!-- Загруженный mp4-файл -->
+                <video controls class="w-100" style="border-radius:12px;">
+                  <source src="{{ $b.Payload.Src }}" type="video/mp4">
+                  Ваш браузер не поддерживает тег video.
+                </video>
+              {{ end }}
 
-          {% if b.payload.caption %}
-            <p class="text-muted mt-2">{{ b.payload.caption }}</p>
-          {% endif %}
+              {{ if $b.Payload.Caption }}
+                <p class="text-muted mt-2">{{ $b.Payload.Caption }}</p>
+              {{ end }}
 
-        {% elif b.type == "assignment" %}
-          <h5>{{ b.payload.title }}</h5>
-          <p>{{ b.payload.instructions }}</p>
-          <form method="post"
-                action="{{ url_for('course.submit_assignment', block_id=b.id) }}"
-                enctype="multipart/form-data">
-            <input type="file" name="file" class="form-control mb-2" required>
-            <button class="btn btn-primary">Отправить</button>
-          </form>
-        {% endif %}
-      </div>
-    {% endfor %}
-  {% endfor %}
+            {{ else if eq $b.Type "assignment" }}
+              <h5>{{ $b.Payload.Title }}</h5>
+              <p>{{ $b.Payload.Instructions }}</p>
+              <form method="post"
+                    action="/blocks/{{ $b.ID }}/submit"
+                    enctype="multipart/form-data">
+                <input type="file" name="file" class="form-control mb-2" required>
+                <button class="btn btn-primary">Отправить</button>
+              </form>
+            {{ end }}
+          </div>
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
 </div>
-{% endblock %}
+{{ end }}

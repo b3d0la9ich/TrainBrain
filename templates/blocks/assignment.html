@@ -1,43 +1,27 @@
-<div id="block-{{ b.id }}" class="card glass mb-3">
+{{ define "blocks/assignment.html" }}
+<div id="block-{{ .ID }}" class="card glass mb-3">
   <div class="card-body">
     <h5 class="card-title">
-      {{ b.payload.get('title', 'Задание') }}
+      {{ if .Title }}{{ .Title }}{{ else }}Задание{{ end }}
     </h5>
 
-    {# ----- УСЛОВИЕ ЗАДАНИЯ ----- #}
-    {% if b.payload.get('prompt') %}
+    {{/* ----- УСЛОВИЕ ЗАДАНИЯ ----- */}}
+    {{ if .PromptHTML }}
       <div class="card-text mb-3">
-        {{ b.payload.get('prompt')|md|safe }}
+        {{ .PromptHTML }}
       </div>
-    {% endif %}
+    {{ end }}
 
-    {# ----- ПРОВЕРКА ТРЕБУЕТСЯ ЛИ ПРЕДВАРИТЕЛЬНЫЙ ТЕСТ ----- #}
-    {% set required_quizzes = [] %}
-    {% for qb in b.module.blocks %}
-      {% if qb.type == 'quiz' and qb.payload.get('require_pass', True) %}
-        {% set _ = required_quizzes.append(qb) %}
-      {% endif %}
-    {% endfor %}
-
-    {% set ns = namespace(passed_any = false) %}
-    {% for qb in required_quizzes %}
-      {% for att in qb.quiz_attempts %}
-        {% if att.user_id == current_user.id and att.passed %}
-          {% set ns.passed_any = true %}
-        {% endif %}
-      {% endfor %}
-    {% endfor %}
-
-    {# ----- ЕСЛИ ТЕСТ НЕ ПРОЙДЕН — БЛОКИРУЕМ ОТПРАВКУ ----- #}
-    {% if required_quizzes and not ns.passed_any %}
+    {{/* ----- ЕСЛИ НУЖЕН ПРЕДВАРИТЕЛЬНЫЙ ТЕСТ И ОН НЕ ПРОЙДЕН ----- */}}
+    {{ if .RequireQuiz }}
       <div class="alert alert-warning d-flex justify-content-between align-items-center">
         <div>
           Чтобы приступить к заданию, сначала пройдите тест по модулю
-          (проходной балл: {{ required_quizzes[0].payload.get('pass_score', 70) }}%).
+          (проходной балл: {{ .RequireQuizPassScore }}%).
         </div>
 
         <a class="btn btn-sm btn-primary"
-           href="{{ url_for('course.course_view', course_id=b.module.course_id) }}#block-{{ required_quizzes[0].id }}">
+           href="/courses/{{ .CourseID }}#block-{{ .RequireQuizBlockID }}">
           Перейти к тесту
         </a>
       </div>
@@ -46,69 +30,68 @@
         Форма отправки будет доступна после успешного прохождения теста.
       </div>
 
-    {% else %}
+    {{ else }}
 
-      {# ----- ФОРМА ОТПРАВКИ ЗАДАНИЯ ----- #}
-      {% if current_user.is_authenticated %}
-        <form method="post" enctype="multipart/form-data"
-              action="{{ url_for('course.submit_assignment', block_id=b.id) }}"
+      {{/* ----- ФОРМА ОТПРАВКИ ЗАДАНИЯ ----- */}}
+      {{ if .CanSubmit }}
+        <form method="post"
+              enctype="multipart/form-data"
+              action="/blocks/{{ .ID }}/submit"
               class="row g-2 mt-2">
 
           <div class="col-md-8">
-            <input class="form-control" type="file" name="solution" required>
+            <input class="form-control"
+                   type="file"
+                   name="solution"
+                   required>
           </div>
 
           <div class="col-md-4">
-            <button class="btn btn-gradient w-100">Отправить решение</button>
+            <button class="btn btn-gradient w-100">
+              Отправить решение
+            </button>
           </div>
         </form>
 
-        {# ----- ОТОБРАЖЕНИЕ МОИХ ОТПРАВОК ----- #}
+        {{/* ----- МОИ ОТПРАВКИ ----- */}}
         <div class="mt-3">
           <div class="fw-semibold mb-1">Мои отправки:</div>
 
-          {% set mine = [] %}
-          {% for s in b.submissions %}
-            {% if s.user_id == current_user.id %}
-              {% set _ = mine.append(s) %}
-            {% endif %}
-          {% endfor %}
-
-          {% if mine %}
+          {{ if .MySubmissions }}
             <ul class="list-group">
-              {% for s in mine|sort(attribute='created_at', reverse=True) %}
+              {{ range $i, $s := .MySubmissions }}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span>
                     <i class="bi bi-file-earmark-text me-1"></i>
-                    <a href="{{ url_for('static', filename=s.stored_path) }}"
-                       target="_blank">{{ s.original_name }}</a>
+                    <a href="{{ $s.URL }}" target="_blank">{{ $s.Name }}</a>
 
                     <span class="text-secondary small ms-2">
-                      ({{ (s.size_bytes or 0) // 1024 }} КБ · {{ s.created_at.strftime('%d.%m.%Y %H:%M') }})
+                      ({{ $s.SizeKB }} КБ · {{ $s.CreatedAt }})
                     </span>
 
-                    {% if s.comment %}
+                    {{ if $s.Comment }}
                       <span class="text-secondary small ms-2">
-                        💬 {{ s.comment }}
+                        💬 {{ $s.Comment }}
                       </span>
-                    {% endif %}
+                    {{ end }}
                   </span>
 
-                  <span class="badge bg-secondary">{{ s.status }}</span>
+                  <span class="badge bg-secondary">{{ $s.Status }}</span>
                 </li>
-              {% endfor %}
+              {{ end }}
             </ul>
-          {% else %}
+          {{ else }}
             <div class="text-secondary small">Отправок пока нет.</div>
-          {% endif %}
+          {{ end }}
         </div>
 
-      {% else %}
+      {{ else if .ShowLoginNotice }}
         <div class="alert alert-info mt-2">
           Чтобы отправить решение, войдите в аккаунт.
         </div>
-      {% endif %}
+      {{ end }}
 
-    {% endif %}
+    {{ end }}
   </div>
 </div>
+{{ end }}

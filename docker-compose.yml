@@ -27,13 +27,19 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+psycopg2://testuser:testpass@db:5432/tester
-      - SECRET_KEY=supersecretkey
-      - FLASK_APP=app.py
+      # app.go читает именно DATABASE_URL
+      - DATABASE_URL=postgresql://testuser:testpass@db:5432/tester?sslmode=disable
+      - SESSION_SECRET=supersecretkey
+      - PORT=5001
+
+      # <<< вот эти две строки создают админа при старте контейнера >>>
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=admin123
     ports:
       - "5001:5001"
-    volumes:
-      - .:/app
+    # Если хочешь редактировать код/шаблоны с хоста — раскомментируй:
+    # volumes:
+    #   - .:/app
 
 volumes:
   tester_pgdata:
