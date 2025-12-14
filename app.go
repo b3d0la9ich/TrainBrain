@@ -419,3 +419,28 @@ func debugPrint(err error) {
 		fmt.Println("DEBUG:", err)
 	}
 }
+
+type Flash struct {
+	Kind string // "success" | "warning" | "danger"
+	Msg  string
+}
+
+func setFlash(c *gin.Context, kind, msg string) {
+	sess := sessions.Default(c)
+	sess.Set("flash_kind", kind)
+	sess.Set("flash_msg", msg)
+	_ = sess.Save()
+}
+
+func popFlash(c *gin.Context) *Flash {
+	sess := sessions.Default(c)
+	k, _ := sess.Get("flash_kind").(string)
+	m, _ := sess.Get("flash_msg").(string)
+	if k == "" || m == "" {
+		return nil
+	}
+	sess.Delete("flash_kind")
+	sess.Delete("flash_msg")
+	_ = sess.Save()
+	return &Flash{Kind: k, Msg: m}
+}

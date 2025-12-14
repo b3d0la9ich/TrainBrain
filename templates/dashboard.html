@@ -51,15 +51,17 @@
       </div>
     </div>
 
+    {{/* Админ-блок — ТОЛЬКО для администраторов */}}
+    {{if and .User (eq .User.Role "admin")}}
     <div class="col-md-6">
-      <div class="card h-100 shadow-sm">
+      <div class="card h-100 shadow-sm border-primary">
         <div class="card-body">
-          <div class="text-uppercase small text-secondary mb-2 fw-semibold">
+          <div class="text-uppercase small text-primary mb-2 fw-semibold">
             Управление
           </div>
           <h5 class="card-title mb-2">Администрирование</h5>
           <p class="card-text text-secondary">
-            Управление курсами, модулями и блоками.
+            Управление курсами, модулями, блоками и проверка заданий.
           </p>
           <a href="/admin/" class="btn btn-outline-primary btn-sm">
             Админ-панель
@@ -67,6 +69,7 @@
         </div>
       </div>
     </div>
+    {{end}}
   </div>
 </div>
 

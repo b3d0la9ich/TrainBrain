@@ -1,6 +1,10 @@
-{{ define "title" }}Отправки{{ end }}
+{{ define "admin/submissions_list.html" }}
+  {{ template "base.html" . }}
+{{ end }}
 
-{{ define "content" }}
+{{ block "title" . }}Отправки — TrainBrain{{ end }}
+
+{{ block "content" . }}
 <div class="container py-4">
 
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -12,11 +16,9 @@
     <div class="alert alert-light border">
       Блок:
       <strong>
-        {{ if .Block.Payload.title }}
-          {{ .Block.Payload.title }}
-        {{ else }}
-          (без названия)
-        {{ end }}
+        {{ $t := "" }}
+        {{ if .Block.PayloadMap }}{{ $t = (index .Block.PayloadMap "title") }}{{ end }}
+        {{ if $t }}{{ $t }}{{ else }}(без названия){{ end }}
       </strong>
 
       <span class="text-muted">
@@ -45,16 +47,16 @@
         <tbody>
           {{ range $i, $s := .Submissions }}
             <tr>
-
               <td>{{ $s.ID }}</td>
-
               <td>{{ $s.User.Email }}</td>
 
               <td>
                 {{ $s.Block.Module.Course.Title }} /
                 #{{ $s.Block.Module.Order }} {{ $s.Block.Module.Title }} /
                 #{{ $s.Block.Order }}
-                {{ if $s.Block.Payload.title }}{{ $s.Block.Payload.title }}{{ end }}
+                {{ $bt := "" }}
+                {{ if $s.Block.PayloadMap }}{{ $bt = (index $s.Block.PayloadMap "title") }}{{ end }}
+                {{ if $bt }} — {{ $bt }}{{ end }}
               </td>
 
               <td>
@@ -78,8 +80,7 @@
                           class="form-select form-select-sm"
                           style="max-width: 160px;">
                     {{ range $j, $st := $.Statuses }}
-                      <option value="{{ $st }}"
-                        {{ if eq $s.Status $st }}selected{{ end }}>
+                      <option value="{{ $st }}" {{ if eq $s.Status $st }}selected{{ end }}>
                         {{ $st }}
                       </option>
                     {{ end }}
@@ -97,13 +98,11 @@
               </td>
 
               <td>{{ $s.CreatedAt.Format "02.01.2006 15:04" }}</td>
-
             </tr>
           {{ end }}
         </tbody>
       </table>
     </div>
-
   {{ else }}
     <div class="text-muted">Отправок пока нет.</div>
   {{ end }}

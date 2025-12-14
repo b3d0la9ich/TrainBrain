@@ -35,10 +35,10 @@ func listCoursesHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "courses.html", gin.H{
 		"User":    user,
 		"Courses": courses,
+		"Flash":   popFlash(c),
 	})
 }
 
-// Просмотр курса — шаблон course_player.html
 // Просмотр курса — шаблон course_player.html
 func viewCourseHandler(c *gin.Context) {
 	user := getCurrentUser(c)
@@ -59,26 +59,68 @@ func viewCourseHandler(c *gin.Context) {
 		return
 	}
 
-	// Преобразуем Payload → PayloadMap и подгружаем вопросы для квизов
+	// Преобразуем Payload → PayloadMap, подгружаем вопросы/варианты для квизов,
+	// и заполняем LastAttempt / LastSubmission для текущего пользователя.
 	for mi := range course.Modules {
 		for bi := range course.Modules[mi].Blocks {
-			block := &course.Modules[mi].Blocks[bi]
+			blk := &course.Modules[mi].Blocks[bi]
 
 			// JSON → map для шаблона
-			if len(block.Payload) > 0 {
+			if len(blk.Payload) > 0 {
 				var pm map[string]any
-				if err := json.Unmarshal(block.Payload, &pm); err == nil {
-					block.PayloadMap = pm
+				if err := json.Unmarshal(blk.Payload, &pm); err == nil {
+					blk.PayloadMap = pm
+				} else {
+					blk.PayloadMap = map[string]any{}
 				}
+			} else {
+				blk.PayloadMap = map[string]any{}
 			}
 
 			// Для квизов подгружаем вопросы/варианты
-			if block.Type == "quiz" {
+			if blk.Type == "quiz" {
 				var qs []QuizQuestion
 				if err := db.Preload("Options").
-					Where("block_id = ?", block.ID).
+					Where("block_id = ?", blk.ID).
+					Order("\"order\" asc").
 					Find(&qs).Error; err == nil {
-					block.QuizQuestions = qs
+					blk.QuizQuestions = qs
+				}
+
+				// Последняя попытка для пользователя
+				if user != nil {
+					var last QuizAttempt
+					err := db.
+						Where("user_id = ? AND block_id = ?", user.ID, blk.ID).
+						Order("created_at desc").
+						First(&last).Error
+
+					if err == nil {
+						blk.LastAttempt = &last
+					} else if err == gorm.ErrRecordNotFound {
+						// ОК: попыток ещё нет
+					} else {
+						c.String(http.StatusInternalServerError, "Ошибка загрузки попытки теста")
+						return
+					}
+				}
+			}
+
+			// Для заданий — последняя сдача
+			if blk.Type == "assignment" && user != nil {
+				var lastS Submission
+				err := db.
+					Where("user_id = ? AND block_id = ?", user.ID, blk.ID).
+					Order("created_at desc").
+					First(&lastS).Error
+
+				if err == nil {
+					blk.LastSubmission = &lastS
+				} else if err == gorm.ErrRecordNotFound {
+					// ОК: сдач ещё нет
+				} else {
+					c.String(http.StatusInternalServerError, "Ошибка загрузки отправки задания")
+					return
 				}
 			}
 		}
@@ -87,11 +129,11 @@ func viewCourseHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "course_player.html", gin.H{
 		"User":   user,
 		"Course": course,
+		"Flash":  popFlash(c),
 	})
 }
 
-
-// Отправка квиза — считает результат и пишет его в БД, после чего выводит quiz_result.html
+// Отправка квиза — считает результат и пишет его в БД, после чего редиректит обратно в курс
 func submitQuizHandler(c *gin.Context) {
 	user := getCurrentUser(c)
 	if user == nil {
@@ -106,19 +148,20 @@ func submitQuizHandler(c *gin.Context) {
 		return
 	}
 
-	var block Block
-	if err := db.First(&block, blockID).Error; err != nil {
+	var blk Block
+	if err := db.First(&blk, blockID).Error; err != nil {
 		c.String(http.StatusNotFound, "Блок не найден")
 		return
 	}
-	if block.Type != "quiz" {
+	if blk.Type != "quiz" {
 		c.String(http.StatusBadRequest, "Этот блок не является тестом")
 		return
 	}
 
 	var questions []QuizQuestion
 	if err := db.Preload("Options").
-		Where("block_id = ?", block.ID).
+		Where("block_id = ?", blk.ID).
+		Order("\"order\" asc").
 		Find(&questions).Error; err != nil {
 		c.String(http.StatusInternalServerError, "Ошибка загрузки вопросов")
 		return
@@ -158,8 +201,8 @@ func submitQuizHandler(c *gin.Context) {
 	var payload struct {
 		PassScore float64 `json:"pass_score"`
 	}
-	if len(block.Payload) > 0 {
-		if err := json.Unmarshal(block.Payload, &payload); err == nil && payload.PassScore > 0 {
+	if len(blk.Payload) > 0 {
+		if err := json.Unmarshal(blk.Payload, &payload); err == nil && payload.PassScore > 0 {
 			passScore = payload.PassScore
 		}
 	}
@@ -170,7 +213,7 @@ func submitQuizHandler(c *gin.Context) {
 
 	attempt := QuizAttempt{
 		UserID:  user.ID,
-		BlockID: block.ID,
+		BlockID: blk.ID,
 		Score:   score,
 		Passed:  passed,
 		Details: datatypes.JSON(detailsBytes),
@@ -180,14 +223,23 @@ func submitQuizHandler(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "quiz_result.html", gin.H{
-		"User":        user,
-		"Block":       block,
-		"Score":       score,
-		"Passed":      passed,
-		"PassScore":   passScore,
-		"Correct":     correctCount,
-		"Total":       total,
-		"LastAttempt": attempt,
-	})
+	// найдём courseID через module
+	var module Module
+	if err := db.First(&module, blk.ModuleID).Error; err != nil {
+		setFlash(c, "success", "Результат сохранён.")
+		c.Redirect(http.StatusFound, "/courses")
+		return
+	}
+
+	kind := "warning"
+	msg := "Тест не пройден."
+	if passed {
+		kind = "success"
+		msg = "Тест пройден!"
+	}
+	setFlash(c, kind, msg+" Балл: "+strconv.FormatFloat(score, 'f', 1, 64)+"%")
+
+	c.Redirect(http.StatusFound,
+		"/courses/"+strconv.Itoa(int(module.CourseID))+"?quiz=1#block-"+strconv.Itoa(int(blk.ID)),
+	)
 }

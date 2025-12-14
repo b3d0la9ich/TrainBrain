@@ -46,6 +46,14 @@ func submitAssignmentHandler(c *gin.Context) {
 
 	file, err := c.FormFile("file")
 	if err != nil {
+		// совместимость со старым именем поля из шаблона
+		file, err = c.FormFile("solution")
+	}
+	if err != nil {
+		c.String(http.StatusBadRequest, "Файл обязателен")
+		return
+	}
+	if err != nil {
 		c.String(http.StatusBadRequest, "Файл обязателен")
 		return
 	}

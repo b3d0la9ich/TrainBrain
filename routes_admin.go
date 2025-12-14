@@ -20,6 +20,68 @@ var SubmissionStatuses = []string{
 	"submitted", "checked", "accepted", "rejected", "needs-fix",
 }
 
+func payloadToMap(j datatypes.JSON) map[string]any {
+	pm := map[string]any{}
+	if len(j) == 0 {
+		return pm
+	}
+	_ = json.Unmarshal(j, &pm)
+	return pm
+}
+
+func buildBlockPayloadFromForm(c *gin.Context, blockType string) (datatypes.JSON, error) {
+	pm := map[string]any{}
+
+	title := strings.TrimSpace(c.PostForm("payload_title"))
+	if title != "" {
+		pm["title"] = title
+	}
+
+	switch blockType {
+	case "text":
+		pm["text"] = c.PostForm("payload_text")
+		img := strings.TrimSpace(c.PostForm("payload_image_url"))
+		if img != "" {
+			pm["image_url"] = img
+		}
+
+	case "assignment":
+		pm["prompt"] = c.PostForm("payload_prompt")
+
+	case "video":
+		mode := strings.TrimSpace(c.PostForm("payload_mode"))
+		if mode == "" {
+			mode = "embed"
+		}
+		pm["mode"] = mode
+
+		if u := strings.TrimSpace(c.PostForm("payload_url")); u != "" {
+			pm["url"] = u
+			// если где-то в старом коде ты читаешь video_url — оставим совместимость
+			pm["video_url"] = u
+		}
+		if s := strings.TrimSpace(c.PostForm("payload_src")); s != "" {
+			pm["src"] = s
+			pm["path"] = s
+		}
+
+	case "quiz":
+		ps := strings.TrimSpace(c.PostForm("payload_pass_score"))
+		if ps != "" {
+			if v, err := strconv.Atoi(ps); err == nil {
+				pm["pass_score"] = v
+			}
+		}
+	}
+
+	b, err := json.Marshal(pm)
+	if err != nil {
+		return nil, err
+	}
+	return datatypes.JSON(b), nil
+}
+
+
 func registerAdminRoutes(r *gin.Engine) {
 	admin := r.Group("/admin", authRequired(), adminRequired())
 	{
@@ -81,10 +143,11 @@ func registerAdminRoutes(r *gin.Engine) {
 ///////////////////////////////////////////////////////
 
 func adminIndexHandler(c *gin.Context) {
-	var courseCount, usersCount, submissionsCount int64
+	var courseCount, usersCount, submissionsCount, attemptsCount int64
 	db.Model(&Course{}).Count(&courseCount)
 	db.Model(&User{}).Count(&usersCount)
 	db.Model(&Submission{}).Count(&submissionsCount)
+	db.Model(&QuizAttempt{}).Count(&attemptsCount)
 
 	user := getCurrentUser(c)
 	email := ""
@@ -108,7 +171,7 @@ func adminIndexHandler(c *gin.Context) {
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/admin/">TrainBrain Admin</a>
-    <div class="ms-auto d-flex gap-2">
+    <div class="ms-auto d-flex gap-2 align-items-center">
       <span class="navbar-text text-light me-3">` + html.EscapeString(email) + `</span>
       <a class="btn btn-outline-light btn-sm" href="/">На сайт</a>
       <a class="btn btn-outline-warning btn-sm" href="/logout">Выйти</a>
@@ -118,14 +181,17 @@ func adminIndexHandler(c *gin.Context) {
 
 <div class="container py-4">
   <h1 class="h3 mb-3">Админ-панель TrainBrain</h1>
+
   <ul class="list-unstyled mb-4">
     <li>Курсов: ` + strconv.FormatInt(courseCount, 10) + `</li>
     <li>Пользователей: ` + strconv.FormatInt(usersCount, 10) + `</li>
     <li>Отправленных заданий: ` + strconv.FormatInt(submissionsCount, 10) + `</li>
+    <li>Попыток тестов: ` + strconv.FormatInt(attemptsCount, 10) + `</li>
   </ul>
 
   <div class="d-flex flex-column gap-2">
     <a href="/admin/courses" class="btn btn-primary btn-sm" style="max-width: 260px;">Управление курсами</a>
+    <a href="/admin/submissions" class="btn btn-outline-secondary btn-sm" style="max-width: 260px;">Проверка заданий</a>
     <a href="/courses" class="btn btn-outline-secondary btn-sm" style="max-width: 260px;">Список курсов (для пользователей)</a>
     <a href="/" class="btn btn-link btn-sm" style="max-width: 260px;">На главную</a>
   </div>
@@ -135,6 +201,7 @@ func adminIndexHandler(c *gin.Context) {
 
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(htmlStr))
 }
+
 
 ///////////////////////////////////////////////////////
 // COURSES
@@ -212,6 +279,14 @@ func adminCourseEditGetHandler(c *gin.Context) {
 		c.String(http.StatusNotFound, "Курс не найден")
 		return
 	}
+
+	for mi := range course.Modules {
+	for bi := range course.Modules[mi].Blocks {
+		b := &course.Modules[mi].Blocks[bi]
+		b.PayloadMap = payloadToMap(b.Payload)
+		}
+	}
+
 
 	c.HTML(http.StatusOK, "admin/course_form.html", gin.H{
 		"course":     course,
@@ -422,120 +497,22 @@ func adminBlockNewGetHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Некорректный ID модуля")
 		return
 	}
+
 	var module Module
 	if err := db.Preload("Course").First(&module, moduleID).Error; err != nil {
 		c.String(http.StatusNotFound, "Модуль не найден")
 		return
 	}
 
-	htmlStr := `<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <title>Новый блок — админка</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body class="bg-light">
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="/admin/">TrainBrain Admin</a>
-    <div class="ms-auto d-flex gap-2">
-      <a class="btn btn-outline-light btn-sm" href="/">На сайт</a>
-      <a class="btn btn-outline-warning btn-sm" href="/logout">Выйти</a>
-    </div>
-  </div>
-</nav>
-
-<div class="container py-4">
-  <div class="mb-3">
-    <a href="/admin/courses/` + strconv.Itoa(int(module.CourseID)) + `/edit" class="btn btn-link btn-sm">
-      &larr; Назад к курсу
-    </a>
-  </div>
-
-  <h1 class="h4 mb-3">Новый блок для модуля: ` + html.EscapeString(module.Title) + `</h1>
-
-  <form method="post" class="card p-3 shadow-sm">
-    <div class="mb-3">
-      <label class="form-label">Тип блока</label>
-      <select name="type" id="block-type" class="form-select">
-        <option value="text">Текст</option>
-        <option value="video">Видео</option>
-        <option value="assignment">Задание</option>
-        <option value="quiz">Тест (quiz)</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Заголовок блока</label>
-      <input type="text" name="title" class="form-control">
-    </div>
-
-    <div class="mb-3 block-field block-text">
-      <label class="form-label">Текст</label>
-      <textarea name="text" class="form-control" rows="6"></textarea>
-    </div>
-
-    <div class="mb-3 block-field block-video" style="display:none;">
-      <label class="form-label">Видео</label>
-
-      <div class="mb-2">
-        <label class="form-label small text-muted">Внешний URL (YouTube/встраиваемый)</label>
-        <input type="url" name="video_url" class="form-control"
-               placeholder="https://www.youtube.com/embed/...">
-      </div>
-
-      <div>
-        <label class="form-label small text-muted">Или файл из uploads/content</label>
-        <input type="text" name="video_file" class="form-control"
-               placeholder="lesson1.mp4">
-        <div class="form-text">
-          Файл должен лежать в <code>/static/uploads/content/</code>.
-          Введите только имя файла, например <code>lesson1.mp4</code>.
-        </div>
-      </div>
-    </div>
-
-    <div class="mb-3 block-field block-assignment" style="display:none;">
-      <label class="form-label">Условие задания</label>
-      <textarea name="assignment_prompt" class="form-control" rows="6"></textarea>
-    </div>
-
-    <div class="mb-3 block-field block-quiz" style="display:none;">
-      <div class="alert alert-info mb-0">
-        Это блок теста. Вопросы и варианты ответов можно будет добавить
-        после создания блока в разделе &laquo;Тесты&raquo;.
-      </div>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Сохранить блок</button>
-  </form>
-</div>
-
-<script>
-  function updateBlockFields() {
-    var type = document.getElementById('block-type').value;
-    document.querySelectorAll('.block-field').forEach(function(el) {
-      el.style.display = 'none';
-    });
-    var target = document.querySelector('.block-' + type);
-    if (target) target.style.display = 'block';
-  }
-  document.getElementById('block-type').addEventListener('change', updateBlockFields);
-  updateBlockFields();
-</script>
-
-</body>
-</html>`
-
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(htmlStr))
+	c.HTML(http.StatusOK, "admin/block_form.html", gin.H{
+		"Module":   module,
+		"Block":    nil,
+		"Payload":  map[string]any{},
+		"CourseID": module.CourseID,
+		"Error":    "",
+	})
 }
+
 
 func adminBlockNewPostHandler(c *gin.Context) {
 	moduleID, err := strconv.Atoi(c.Param("module_id"))
@@ -543,73 +520,64 @@ func adminBlockNewPostHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Некорректный ID модуля")
 		return
 	}
+
 	var module Module
 	if err := db.Preload("Course").First(&module, moduleID).Error; err != nil {
 		c.String(http.StatusNotFound, "Модуль не найден")
 		return
 	}
 
-	blockType := c.PostForm("type")
-	title := strings.TrimSpace(c.PostForm("title"))
-	text := c.PostForm("text")
-	videoURL := strings.TrimSpace(c.PostForm("video_url"))
-	videoFile := strings.TrimSpace(c.PostForm("video_file"))
-	assignmentPrompt := c.PostForm("assignment_prompt")
+	blockType := strings.TrimSpace(c.PostForm("type"))
+	if blockType == "" {
+		blockType = "text"
+	}
 
+	// порядок (если не указан — ставим max+1)
 	var maxOrder int64
 	db.Model(&Block{}).
 		Where("module_id = ?", module.ID).
-		Select("COALESCE(MAX(\"order\"), 0)").Scan(&maxOrder)
+		Select(`COALESCE(MAX("order"), 0)`).
+		Scan(&maxOrder)
 
-	payload := make(map[string]any)
-	if title != "" {
-		payload["title"] = title
-		payload["heading"] = title
-		payload["name"] = title
-	}
-
-	switch blockType {
-	case "text":
-		payload["text"] = text
-		payload["content"] = text
-		payload["body"] = text
-		payload["text_md"] = text
-	case "video":
-		// если указали внешний URL
-		if videoURL != "" {
-			payload["mode"] = "embed"
-			payload["url"] = videoURL
-			// для обратной совместимости
-			payload["video_url"] = videoURL
-		} else if videoFile != "" {
-			// локальный файл из static/uploads/content
-			if !strings.HasPrefix(videoFile, "/") {
-				videoFile = "/static/uploads/content/" + videoFile
-			}
-			payload["mode"] = "file"
-			payload["src"] = videoFile
-			// чтобы старый код, если где-то смотрит на video_url, тоже работал
-			payload["video_url"] = videoFile
+	order := int(maxOrder) + 1
+	if s := strings.TrimSpace(c.PostForm("order")); s != "" {
+		if v, e := strconv.Atoi(s); e == nil && v > 0 {
+			order = v
 		}
-	case "assignment":
-		payload["prompt"] = assignmentPrompt
-		payload["text"] = assignmentPrompt
-		payload["content"] = assignmentPrompt
 	}
 
-	payloadBytes, _ := json.Marshal(payload)
+	payloadJSON, err := buildBlockPayloadFromForm(c, blockType)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, "admin/block_form.html", gin.H{
+			"Module":   module,
+			"Block":    nil,
+			"Payload":  map[string]any{},
+			"CourseID": module.CourseID,
+			"Error":    "Ошибка формирования payload",
+		})
+		return
+	}
+
 	block := Block{
 		Type:     blockType,
 		ModuleID: module.ID,
-		Order:    int(maxOrder) + 1,
-		Payload:  datatypes.JSON(payloadBytes),
+		Order:    order,
+		Payload:  payloadJSON,
 	}
 	if err := db.Create(&block).Error; err != nil {
-		c.String(http.StatusInternalServerError, "Ошибка сохранения блока")
+		c.HTML(http.StatusInternalServerError, "admin/block_form.html", gin.H{
+			"Module":   module,
+			"Block":    nil,
+			"Payload":  payloadToMap(payloadJSON),
+			"CourseID": module.CourseID,
+			"Error":    "Ошибка сохранения блока",
+		})
 		return
 	}
+
 	c.Redirect(http.StatusFound, "/admin/courses/"+strconv.Itoa(int(module.CourseID))+"/edit")
 }
+
 
 func adminBlockEditGetHandler(c *gin.Context) {
 	blockID, err := strconv.Atoi(c.Param("block_id"))
@@ -617,51 +585,22 @@ func adminBlockEditGetHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Некорректный ID блока")
 		return
 	}
+
 	var block Block
 	if err := db.Preload("Module").Preload("Module.Course").First(&block, blockID).Error; err != nil {
 		c.String(http.StatusNotFound, "Блок не найден")
 		return
 	}
 
-	payload := map[string]any{}
-	_ = json.Unmarshal(block.Payload, &payload)
-
-	ctx := gin.H{
-		"module": block.Module,
-		"block":  block,
-		"title":  "Редактирование блока",
-	}
-
-	if v, ok := payload["title"].(string); ok {
-		ctx["title_value"] = v
-	}
-	switch block.Type {
-	case "text":
-		if v, ok := payload["text"].(string); ok {
-			ctx["text"] = v
-		}
-	case "video":
-		// поддерживаем и старый формат (video_url), и новый (mode+url/src)
-		if mode, ok := payload["mode"].(string); ok && mode == "file" {
-			if v, ok2 := payload["src"].(string); ok2 {
-				// в форме можно показывать только имя файла
-				ctx["video_file"] = strings.TrimPrefix(v, "/static/uploads/content/")
-			}
-		} else {
-			if v, ok2 := payload["video_url"].(string); ok2 && v != "" {
-				ctx["video_url"] = v
-			} else if v, ok2 := payload["url"].(string); ok2 {
-				ctx["video_url"] = v
-			}
-		}
-	case "assignment":
-		if v, ok := payload["prompt"].(string); ok {
-			ctx["assignment_prompt"] = v
-		}
-	}
-
-	c.HTML(http.StatusOK, "admin/block_form.html", ctx)
+	c.HTML(http.StatusOK, "admin/block_form.html", gin.H{
+		"Module":   block.Module,
+		"Block":    block,
+		"Payload":  payloadToMap(block.Payload),
+		"CourseID": block.Module.CourseID,
+		"Error":    "",
+	})
 }
+
 
 func adminBlockEditPostHandler(c *gin.Context) {
 	blockID, err := strconv.Atoi(c.Param("block_id"))
@@ -669,62 +608,53 @@ func adminBlockEditPostHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Некорректный ID блока")
 		return
 	}
+
 	var block Block
-	if err := db.Preload("Module").First(&block, blockID).Error; err != nil {
+	if err := db.Preload("Module").Preload("Module.Course").First(&block, blockID).Error; err != nil {
 		c.String(http.StatusNotFound, "Блок не найден")
 		return
 	}
 
-	blockType := c.PostForm("type")
-	title := strings.TrimSpace(c.PostForm("title"))
-	text := c.PostForm("text")
-	videoURL := strings.TrimSpace(c.PostForm("video_url"))
-	videoFile := strings.TrimSpace(c.PostForm("video_file"))
-	assignmentPrompt := c.PostForm("assignment_prompt")
-
-	payload := make(map[string]any)
-	if title != "" {
-		payload["title"] = title
-		payload["heading"] = title
-		payload["name"] = title
+	blockType := strings.TrimSpace(c.PostForm("type"))
+	if blockType == "" {
+		blockType = block.Type
 	}
 
-	switch blockType {
-	case "text":
-		payload["text"] = text
-		payload["content"] = text
-		payload["body"] = text
-		payload["text_md"] = text
-	case "video":
-		if videoURL != "" {
-			payload["mode"] = "embed"
-			payload["url"] = videoURL
-			payload["video_url"] = videoURL
-		} else if videoFile != "" {
-			if !strings.HasPrefix(videoFile, "/") {
-				videoFile = "/static/uploads/content/" + videoFile
-			}
-			payload["mode"] = "file"
-			payload["src"] = videoFile
-			payload["video_url"] = videoFile
+	if s := strings.TrimSpace(c.PostForm("order")); s != "" {
+		if v, e := strconv.Atoi(s); e == nil && v > 0 {
+			block.Order = v
 		}
-	case "assignment":
-		payload["prompt"] = assignmentPrompt
-		payload["text"] = assignmentPrompt
-		payload["content"] = assignmentPrompt
 	}
 
-	payloadBytes, _ := json.Marshal(payload)
+	payloadJSON, err := buildBlockPayloadFromForm(c, blockType)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, "admin/block_form.html", gin.H{
+			"Module":   block.Module,
+			"Block":    block,
+			"Payload":  payloadToMap(block.Payload),
+			"CourseID": block.Module.CourseID,
+			"Error":    "Ошибка формирования payload",
+		})
+		return
+	}
+
 	block.Type = blockType
-	block.Payload = datatypes.JSON(payloadBytes)
+	block.Payload = payloadJSON
 
 	if err := db.Save(&block).Error; err != nil {
-		c.String(http.StatusInternalServerError, "Ошибка сохранения блока")
+		c.HTML(http.StatusInternalServerError, "admin/block_form.html", gin.H{
+			"Module":   block.Module,
+			"Block":    block,
+			"Payload":  payloadToMap(payloadJSON),
+			"CourseID": block.Module.CourseID,
+			"Error":    "Ошибка сохранения блока",
+		})
 		return
 	}
 
 	c.Redirect(http.StatusFound, "/admin/courses/"+strconv.Itoa(int(block.Module.CourseID))+"/edit")
 }
+
 
 ///////////////////////////////////////////////////////
 // UPLOAD IMAGE

@@ -91,10 +91,10 @@
                     data-bs-target="#collapse-{{$m.ID}}"
                     aria-expanded="false"
                     aria-controls="collapse-{{$m.ID}}">
-              <span class="me-2 text-muted">#{{$m.Order}}</span>
               {{$m.Title}}
             </button>
           </h2>
+
           <div id="collapse-{{$m.ID}}" class="accordion-collapse collapse"
                aria-labelledby="heading-{{$m.ID}}"
                data-bs-parent="#modulesAccordion">
@@ -133,7 +133,6 @@
                   <table class="table table-sm align-middle mb-0">
                     <thead>
                       <tr>
-                        <th>#</th>
                         <th>Тип</th>
                         <th>Заголовок</th>
                         <th class="text-end">Действия</th>
@@ -142,7 +141,6 @@
                     <tbody>
                     {{range $m.Blocks}}
                       <tr>
-                        <td>{{.Order}}</td>
                         <td>
                           {{if eq .Type "text"}}Текст
                           {{else if eq .Type "video"}}Видео
@@ -150,10 +148,14 @@
                           {{else if eq .Type "assignment"}}Задание
                           {{else}}{{.Type}}{{end}}
                         </td>
-                        <td>{{.ID}}</td>
+
+                        <td>
+                          {{ $t := "" }}
+                          {{ if .PayloadMap }}{{ $t = (index .PayloadMap "title") }}{{ end }}
+                          {{ if $t }}{{ $t }}{{ else }}<span class="text-muted">(без названия)</span>{{ end }}
+                        </td>
 
                         <td class="text-end">
-
                           {{if eq .Type "quiz"}}
                             <a href="/admin/quizzes/{{.ID}}"
                                class="btn btn-sm btn-outline-success me-1">

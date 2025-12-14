@@ -43,6 +43,11 @@
         <h1 class="mb-0">{{ .Course.Title }}</h1>
         <a href="/courses" class="btn btn-outline-secondary">← Ко всем курсам</a>
       </div>
+
+      {{ if .Flash }}
+        <div class="alert alert-{{ .Flash.Kind }} mt-3">{{ .Flash.Msg }}</div>
+      {{ end }}
+
       {{ if .Course.ShortDesc }}
         <p class="text-secondary">{{ .Course.ShortDesc }}</p>
       {{ end }}
@@ -54,11 +59,21 @@
           {{ range .Blocks }}
             <div id="block-{{ .ID }}" class="card glass mb-3">
               <div class="card-body">
+
                 {{/* ---------- ТЕКСТОВЫЙ БЛОК ---------- */}}
                 {{ if eq .Type "text" }}
                   <h5 class="card-title">{{ index .PayloadMap "title" }}</h5>
+
+                  {{ $img := "" }}
+                  {{ if .PayloadMap }}{{ $img = (index .PayloadMap "image_url") }}{{ end }}
+                  {{ if $img }}
+                    <div class="mb-2">
+                      <img src="{{ $img }}" alt="" class="img-fluid" style="border-radius:0.75rem;">
+                    </div>
+                  {{ end }}
+
                   {{ if index .PayloadMap "text" }}
-                    <div class="card-text">{{ safe (index .PayloadMap "text") }}</div>
+                    <div class="card-text" style="white-space: pre-wrap;">{{ index .PayloadMap "text" }}</div>
                   {{ end }}
                 {{ end }}
 
@@ -101,9 +116,20 @@
                 {{/* ---------- ЗАДАНИЕ ---------- */}}
                 {{ if eq .Type "assignment" }}
                   <h5 class="card-title">{{ index .PayloadMap "title" }}</h5>
+
                   {{ if index .PayloadMap "prompt" }}
-                    <div class="card-text mb-2">
-                      {{ safe (index .PayloadMap "prompt") }}
+                    <div class="card-text mb-2" style="white-space: pre-wrap;">{{ index .PayloadMap "prompt" }}</div>
+                  {{ end }}
+
+                  {{ if .LastSubmission }}
+                    <div class="alert alert-secondary py-2 small mb-2">
+                      <div><b>Последняя отправка:</b> {{ .LastSubmission.Status }}</div>
+                      {{ if .LastSubmission.Comment }}
+                        <div><b>Комментарий:</b> {{ .LastSubmission.Comment }}</div>
+                      {{ end }}
+                      {{ if .LastSubmission.OriginalName }}
+                        <div><b>Файл:</b> {{ .LastSubmission.OriginalName }}</div>
+                      {{ end }}
                     </div>
                   {{ end }}
 
@@ -111,7 +137,7 @@
                     <form method="post" enctype="multipart/form-data"
                           action="/submit/{{ .ID }}" class="row g-2 mt-2">
                       <div class="col-md-8">
-                        <input class="form-control" type="file" name="solution" required>
+                        <input class="form-control" type="file" name="file" required>
                       </div>
                       <div class="col-md-4">
                         <button class="btn btn-gradient w-100">Отправить решение</button>
@@ -131,34 +157,46 @@
                     Проходной балл: {{ or (index .PayloadMap "pass_score") 70 }}%
                   </div>
 
+                  {{ if and .LastAttempt .LastAttempt.Passed }}
+                    <div class="alert alert-success py-2 small mb-3">
+                      ✅ Тест пройден.
+                      Балл: {{ printf "%.1f" .LastAttempt.Score }}%
+                    </div>
+                  {{ end }}
+
                   {{ if $.User }}
-                    <form method="post" action="/courses/{{ .ID }}/quiz-submit">
-                      {{ range $qi, $q := .QuizQuestions }}
-                        <div class="border rounded p-3 mb-3">
-                          <div class="fw-semibold mb-2">
-                            Вопрос {{ $qi | add 1 }}. {{ $q.Text }}
-                          </div>
-                          {{ range $oi, $opt := $q.Options }}
-                            <div class="form-check">
-                              <input class="form-check-input" type="radio"
-                                     name="question_{{ $q.ID }}"
-                                     value="{{ $opt.ID }}"
-                                     id="q{{ $q.ID }}o{{ $opt.ID }}">
-                              <label class="form-check-label" for="q{{ $q.ID }}o{{ $opt.ID }}">
-                                {{ $opt.Text }}
-                              </label>
+                    {{ if and .LastAttempt .LastAttempt.Passed }}
+                      {{/* ничего */}}
+                    {{ else }}
+                      <form method="post" action="/courses/{{ .ID }}/quiz-submit">
+                        {{ range $qi, $q := .QuizQuestions }}
+                          <div class="border rounded p-3 mb-3">
+                            <div class="fw-semibold mb-2">
+                              Вопрос {{ $qi | add 1 }}. {{ $q.Text }}
                             </div>
-                          {{ end }}
-                        </div>
-                      {{ end }}
-                      <button class="btn btn-gradient">Отправить ответы</button>
-                    </form>
+                            {{ range $oi, $opt := $q.Options }}
+                              <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="question_{{ $q.ID }}"
+                                       value="{{ $opt.ID }}"
+                                       id="q{{ $q.ID }}o{{ $opt.ID }}">
+                                <label class="form-check-label" for="q{{ $q.ID }}o{{ $opt.ID }}">
+                                  {{ $opt.Text }}
+                                </label>
+                              </div>
+                            {{ end }}
+                          </div>
+                        {{ end }}
+                        <button class="btn btn-gradient">Отправить ответы</button>
+                      </form>
+                    {{ end }}
                   {{ else }}
                     <div class="alert alert-info mt-2">
                       Чтобы пройти тест, войдите в аккаунт.
                     </div>
                   {{ end }}
                 {{ end }}
+
               </div>
             </div>
           {{ end }}
